@@ -1,0 +1,2 @@
+cwd changed to 
+/home/logan/Desktop/CSCI352

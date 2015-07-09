@@ -9,9 +9,10 @@
 
 
 FILE* outCheck(char **tokens);
+int myprint(char** tokens, char* output, int newline);
 
-int myprint(char** tokens, char* output);
-
+int pwd(char** tokens);
+int cd(char** tokens);
 
 /*
 
@@ -26,9 +27,6 @@ int main (int argc, char** argv) {
     int i;
     int opt;
 
-    char *cwd;
-    char buff[MAX_LINE];
-    size_t size = MAX_LINE;
     
     char* opts[4];
     opts[0] = "exit";
@@ -69,17 +67,13 @@ printf("exit command found\n");
 #if DEBUG            
 printf("cd command found\n");
 #endif
-
-
-
-
+                cd(tokens);
                 break;
                 case 2://pwd      
 #if DEBUG            
 printf("pwd command found\n");
 #endif
-                cwd = getcwd(buff, size);
-                myprint(tokens, cwd);
+                pwd(tokens);
                 break;
                 case 3://showenv
 #if DEBUG            
@@ -105,20 +99,89 @@ printf("external command found\n");
     return 0;
 }
 
+
+
+/*
+  Performs cd command
+
+
+
+  TODO BUG: multiple calls to myprint causes newline with
+  each open to file.
+*/
+
+int cd(char** tokens){
+
+   char *dir = tokens[1];
+   char succ[MAX_LINE];
+   char fail[MAX_LINE];
+   char *output;
+
+   strcpy(succ, "cwd changed to ");
+   strcpy(fail, "No such directory: ");
+
+   if (!chdir(dir)){
+      myprint(tokens, succ, 0);
+      pwd(tokens);
+      myprint(tokens, "", 1);
+   }else{
+      output = strcat(fail, dir);
+      myprint(tokens, output, 1);
+   }
+
+   return 0;
+}
+
+/*
+  Performs pwd command
+
+
+*/
+
+int pwd(char** tokens){
+
+    char *cwd;
+    char buff[MAX_LINE];
+    size_t size = MAX_LINE;
+
+    cwd = getcwd(buff, size);
+
+    myprint(tokens, cwd, 0);
+    return 0;
+
+}
+
+
+
+
+
+
+
+
+
+
 /*
    prints based on users stdout choice
 
 */
 
-int myprint(char** tokens, char* output){
+int myprint(char** tokens, char* output, int newline){
 
   FILE *out;
 
   if((out = outCheck(tokens))){
-    fprintf(out, "%s", output);
+    if(newline){
+      fprintf(out, "%s", output);
+    }else{
+      fprintf(out, "%s\n", output);
+    }
     fclose(out);
   }else{
-    printf("%s", output);
+    if(newline){
+      printf("%s\n", output);
+    }else{ 
+      printf("%s", output);
+    }
   }
 
   return 0;
@@ -145,13 +208,13 @@ printf("> found in token: %s\n", tokens[i]);
 #endif
  
       if(tokens[i][1] != '\0'){//no space
-        if((newout = fopen(&tokens[i][1],"w"))){
+        if((newout = fopen(&tokens[i][1],"a"))){
           return newout;
         }else{
           printf("cannot open file %s to write\n", &tokens[i][1]);
         }
       }else{//space after
-        if((newout = fopen(tokens[i+1],"w"))){
+        if((newout = fopen(tokens[i+1],"a"))){
           return newout;
         }else{
           printf("cannot open file %s to write\n", tokens[i+1]);
@@ -162,14 +225,6 @@ printf("> found in token: %s\n", tokens[i]);
   return NULL;
 
 }
-
-
-
-
-
-
-
-
 
 
 
