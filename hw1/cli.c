@@ -3,20 +3,28 @@
 #include <stdlib.h>
 #include <string.h>
 #include "tokenizer.h"
+#include <wait.h>
 
 #define MAX_LINE  1024
 #define DEBUG     1
 
-
+//  I/O functions
 FILE* outCheck(char **tokens);
-int myprint(char** tokens, char* output, int newline);
+int myprint(char **tokens, char *output, int newline);
 
-int pwd(char** tokens);
-int cd(char** tokens);
+char **getargs(char** tokens);
+
+//  command functions
+int pwd(char **tokens);
+int cd(char **tokens);
+
+
+
+int runExternal(char **tokens);
 
 /*
 
-  Handles parsing user input
+  Handles user input
 
 */
 int main (int argc, char** argv) {
@@ -28,11 +36,10 @@ int main (int argc, char** argv) {
     int opt;
 
     
-    char* opts[4];
+    char* opts[3];
     opts[0] = "exit";
     opts[1] = "cd";
     opts[2] = "pwd";
-    opts[3] = "showenv";
 
     // get a line from stdin and get the tokens
     printf("$> ");
@@ -61,7 +68,6 @@ int main (int argc, char** argv) {
 printf("exit command found\n");
 #endif
                 exit(0);
-
                 break;
                 case 1://cd
 #if DEBUG            
@@ -75,19 +81,12 @@ printf("pwd command found\n");
 #endif
                 pwd(tokens);
                 break;
-                case 3://showenv
-#if DEBUG            
-printf("showenv command found\n");
-#endif
-
-
-
-                break;
+                
                 default:
 #if DEBUG            
 printf("external command found\n");
 #endif
-
+                runExternal(tokens);
 
 
                 break;
@@ -151,13 +150,98 @@ int pwd(char** tokens){
 
 }
 
+/*
+  Runs eternal commands. 
+
+
+*/
+int runExternal(char **tokens){
+
+    int status;
+    pid_t pid;
+    int fd[2];
+    char output[MAX_LINE];
+    char **args;
+
+    if(pipe(fd) < 0){
+      strcpy(output, "pipe error");
+      myprint(tokens, output, 1);
+    }
+ 
+    if((pid = fork()) == -1){ //error
+      strcpy(output, "fork error");
+      myprint(tokens, output, 1);
+    }else if (pid == 0){ //child
+        //set up env
+
+        close(fd[0]);
+        dup2(fd[1], STDOUT_FILENO);
+
+        args = getargs(tokens);
+
+        execvp(tokens[0], args);
+        exit(0);
+    }else{ //parent
+
+        close(fd[1]);
+        while(read(fd[0], output, MAX_LINE)){
+           myprint(tokens, output, 0);
+        }
+        close(fd[0]);
+
+        wait(&status);
+#if DEBUG
+printf("child status: %d\n", status);
+#endif
+    }
+
+    return 0;
+}
 
 
 
+/*
+  Creates args for external commands by
+  removing I/O redirects from tokens
+  if they exist.
 
+*/
+char **getargs(char** tokens){
 
+  char **args;
+  int i = 0;
+  int j = 0;
 
+  //count size of args
+  for (i = 0; tokens[i]; i++){
+    if((tokens[i][0] == '>') || (tokens[i][0] == '<')){ 
+      if(tokens[i][1] != '\0'){//no space
+         j++;
+      }else{//space after
+         j = j + 2;
+      } 
+    }
+  }
 
+  args = (char **)malloc((i-j) * sizeof(char **));
+  j = 0;
+
+  //fill args
+  for (i = 0; tokens[i]; i++){
+    if((tokens[i][0] == '>') || (tokens[i][0] == '<')){ 
+      if(tokens[i][1] == '\0'){//space between file, skip it
+         i++;
+      }
+    }else{
+    args[j] = (char *)malloc(sizeof(char) * strlen(tokens[i]));
+    args[j] = tokens[i];
+    j++;
+    } 
+  }
+
+  return args;
+
+}
 
 
 /*
