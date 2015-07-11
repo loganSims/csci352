@@ -8,19 +8,20 @@
 #define MAX_LINE  1024
 #define DEBUG     1
 
+
+
 //  I/O functions
 FILE* outCheck(char **tokens);
-int myprint(char **tokens, char *output, int newline);
 
 char **getargs(char** tokens);
 
 //  command functions
-int pwd(char **tokens);
-int cd(char **tokens);
+int pwd(char **tokens, FILE* masterOutput);
+int cd(char **tokens, FILE* masterOutput);
 
 
 
-int runExternal(char **tokens);
+int runExternal(char **tokens, FILE* masterOutput);
 
 /*
 
@@ -35,6 +36,8 @@ int main (int argc, char** argv) {
     int i;
     int opt;
 
+    //FILE* masterInput = stdin;
+    FILE* masterOutput = stdout;
     
     char* opts[3];
     opts[0] = "exit";
@@ -50,8 +53,11 @@ int main (int argc, char** argv) {
         // remove the '\n' from the end of the line
         line[strlen(line)-1] = '\0';
         
-        // get and display the tokens in line
         tokens = gettokens(line);
+
+        masterOutput = outCheck(tokens);
+
+
 
         if(tokens[0]){
 
@@ -73,25 +79,33 @@ printf("exit command found\n");
 #if DEBUG            
 printf("cd command found\n");
 #endif
-                cd(tokens);
+                cd(tokens, masterOutput);
                 break;
                 case 2://pwd      
 #if DEBUG            
 printf("pwd command found\n");
 #endif
-                pwd(tokens);
+                pwd(tokens, masterOutput);
                 break;
                 
                 default:
 #if DEBUG            
 printf("external command found\n");
 #endif
-                runExternal(tokens);
+                runExternal(tokens, masterOutput);
 
 
                 break;
             }
         }
+
+
+        //return masterOutput to stdout if needed
+        if (masterOutput != stdout) {
+          fclose(masterOutput);
+          masterOutput = stdout;
+        }
+
         free(tokens);
         printf("$> ");
     }
@@ -100,16 +114,28 @@ printf("external command found\n");
 
 
 
+
+
+
+
+int issueCommand(char**tokens){
+
+
+
+
+
+
+
+}
+
+
 /*
   Performs cd command
 
 
-
-  TODO BUG: multiple calls to myprint causes newline with
-  each open to file.
 */
 
-int cd(char** tokens){
+int cd(char** tokens, FILE* masterOutput){
 
    char *dir = tokens[1];
    char succ[MAX_LINE];
@@ -120,12 +146,12 @@ int cd(char** tokens){
    strcpy(fail, "No such directory: ");
 
    if (!chdir(dir)){
-      myprint(tokens, succ, 0);
-      pwd(tokens);
-      myprint(tokens, "", 1);
+      fprintf(masterOutput, "%s", succ);
+      pwd(tokens, masterOutput);
+      fprintf(masterOutput, "\n");
    }else{
       output = strcat(fail, dir);
-      myprint(tokens, output, 1);
+      fprintf(masterOutput, "%s\n", output);
    }
 
    return 0;
@@ -137,15 +163,16 @@ int cd(char** tokens){
 
 */
 
-int pwd(char** tokens){
+int pwd(char** tokens, FILE* masterOutput){
 
     char *cwd;
     char buff[MAX_LINE];
     size_t size = MAX_LINE;
 
     cwd = getcwd(buff, size);
+ 
+    fprintf(masterOutput, "%s", cwd);
 
-    myprint(tokens, cwd, 0);
     return 0;
 
 }
@@ -155,39 +182,28 @@ int pwd(char** tokens){
 
 
 */
-int runExternal(char **tokens){
+int runExternal(char **tokens, FILE* masterOutput){
 
     int status;
     pid_t pid;
-    int fd[2];
-    char output[MAX_LINE];
     char **args;
-
-    if(pipe(fd) < 0){
-      strcpy(output, "pipe error");
-      myprint(tokens, output, 1);
-    }
  
     if((pid = fork()) == -1){ //error
-      strcpy(output, "fork error");
-      myprint(tokens, output, 1);
     }else if (pid == 0){ //child
-        //set up env
+        //TODO set up env?
 
-        close(fd[0]);
-        dup2(fd[1], STDOUT_FILENO);
 
+        //set childs I/O
+        dup2(fileno(masterOutput), STDOUT_FILENO);
+
+
+        //create childs args
         args = getargs(tokens);
 
         execvp(tokens[0], args);
+
         exit(0);
     }else{ //parent
-
-        close(fd[1]);
-        while(read(fd[0], output, MAX_LINE)){
-           myprint(tokens, output, 0);
-        }
-        close(fd[0]);
 
         wait(&status);
 #if DEBUG
@@ -244,39 +260,9 @@ char **getargs(char** tokens){
 }
 
 
-/*
-   prints based on users stdout choice
-
-*/
-
-int myprint(char** tokens, char* output, int newline){
-
-  FILE *out;
-
-  if((out = outCheck(tokens))){
-    if(newline){
-      fprintf(out, "%s", output);
-    }else{
-      fprintf(out, "%s\n", output);
-    }
-    fclose(out);
-  }else{
-    if(newline){
-      printf("%s\n", output);
-    }else{ 
-      printf("%s", output);
-    }
-  }
-
-  return 0;
-}
-
 
 /*
-
-  returns file desc of open file, 
-  returns null if user did not change stdout.
-
+  sets masterOutput to either stdout or a file
 */
 FILE* outCheck(char **tokens){
 
@@ -290,7 +276,7 @@ FILE* outCheck(char **tokens){
 #if DEBUG
 printf("> found in token: %s\n", tokens[i]);
 #endif
- 
+
       if(tokens[i][1] != '\0'){//no space
         if((newout = fopen(&tokens[i][1],"a"))){
           return newout;
@@ -306,7 +292,7 @@ printf("> found in token: %s\n", tokens[i]);
       } 
     }
   }
-  return NULL;
+  return stdout;
 
 }
 
