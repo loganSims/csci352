@@ -28,8 +28,8 @@ int cd(char** tokens, FILE* masterOutput);
 int runExternal(char** tokens, FILE* masterOutput);
 
 /*
-
-
+  main function. 
+  Has main loop for user input.
  */
 int main (int argc, char** argv) {
 
@@ -48,10 +48,13 @@ int main (int argc, char** argv) {
         // remove the '\n' from the end of the line
         line[strlen(line)-1] = '\0';
 
+        //get tokens
         tokens = gettokens(line); 
 
+        //check output options
         masterOutput = outCheck(tokens);
 
+        //execute user command
         issueCommand(tokens, masterOutput);
 
         //return masterOutput to stdout if needed
@@ -65,13 +68,9 @@ int main (int argc, char** argv) {
     }
     return 0;
 }
-
-
 /*
-   Handles user input
-
+   Handles user input.
  */
-
 int issueCommand(char**tokens, FILE* masterOutput){
 
     int i;
@@ -81,7 +80,6 @@ int issueCommand(char**tokens, FILE* masterOutput){
     opts[0] = "exit";
     opts[1] = "cd";
     opts[2] = "pwd";
-
 
     if(tokens[0]){
 
@@ -109,14 +107,12 @@ int issueCommand(char**tokens, FILE* masterOutput){
     }
     return 0;
 }
-
-
 /*
-   Performs cd command
+   Performs cd command.
 
-
+   Uses chdir() function.
+   Uses pwd to display cwd on success.
  */
-
 int cd(char** tokens, FILE* masterOutput){
 
     char *dir = tokens[1];
@@ -127,12 +123,13 @@ int cd(char** tokens, FILE* masterOutput){
     strcpy(succ, "cwd changed to ");
     strcpy(fail, "No such directory: ");
 
+    //check for input
     if (!(tokens[1])) {
         fprintf(masterOutput, "Please enter a directory.\n");
         return 0;
     }
 
-
+    //attempt to change directory
     if (!chdir(dir)){
         fprintf(masterOutput, "%s", succ);
         pwd(tokens, masterOutput);
@@ -144,13 +141,12 @@ int cd(char** tokens, FILE* masterOutput){
 
     return 0;
 }
-
 /*
-   Performs pwd command
+   Performs pwd command.
 
-
+   Used getcwd command to display
+   current working directory.
  */
-
 int pwd(char** tokens, FILE* masterOutput){
 
     char *cwd;
@@ -164,11 +160,13 @@ int pwd(char** tokens, FILE* masterOutput){
     return 0;
 
 }
-
 /*
    Runs eternal commands. 
 
+   Uses fork and execvp to run child process
 
+   Builds arguments for child by using 
+   getargs() defined below.  
  */
 int runExternal(char **tokens, FILE* masterOutput){
 
@@ -180,13 +178,14 @@ int runExternal(char **tokens, FILE* masterOutput){
 
     if((pid = fork()) == -1){ //error
 
+        fprintf(masterOutput, "failed to fork.");
+
     }else if (pid == 0){ //child
+
         //set childs I/O
         dup2(fileno(masterOutput), STDOUT_FILENO);
 
         execvp(tokens[0], args);
-
-        fclose(masterOutput);
 
         exit(0);
     }else{ //parent
@@ -199,14 +198,10 @@ int runExternal(char **tokens, FILE* masterOutput){
 
     return 0;
 }
-
-
-
 /*
    Creates args for external commands by
    removing I/O redirects from tokens
    if they exist.
-
  */
 char **getargs(char** tokens){
 
@@ -243,9 +238,6 @@ char **getargs(char** tokens){
     args[j] = 0;
     return args;
 }
-
-
-
 /*
    sets masterOutput to either stdout or a file
  */
@@ -261,7 +253,6 @@ FILE* outCheck(char **tokens){
 #if DEBUG
             printf("> found in token: %s\n", tokens[i]);
 #endif
-
             if(tokens[i][1] != '\0'){//no space
                 if((newout = fopen(&tokens[i][1],"a"))){
                     return newout;
@@ -280,10 +271,10 @@ FILE* outCheck(char **tokens){
     return stdout;
 }
 /*
-
-   Adds programs in cwd to PATH env.
-   called at the start of the program cwd is changed
-
+   Appends cwd to PATH env.
+   Called at the start of the program before 
+   cwd is changed. Allows fref and showenv to
+   be executed independent of cwd.
  */
 
 int setPaths(){
