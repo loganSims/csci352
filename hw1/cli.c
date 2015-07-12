@@ -9,96 +9,50 @@
 #define DEBUG     1
 
 
+// Parsing function
+int issueCommand(char** tokens, FILE* masterOutput);
 
 //  I/O functions
-FILE* outCheck(char **tokens);
+FILE* outCheck(char** tokens);
 
-char **getargs(char** tokens);
+// Sets fref and shwoenv to PATH
+int setPaths();
+
+// setup external function args
+char** getargs(char** tokens);
 
 //  command functions
-int pwd(char **tokens, FILE* masterOutput);
-int cd(char **tokens, FILE* masterOutput);
+int pwd(char** tokens, FILE* masterOutput);
+int cd(char** tokens, FILE* masterOutput);
 
-
-
-int runExternal(char **tokens, FILE* masterOutput);
+int runExternal(char** tokens, FILE* masterOutput);
 
 /*
 
-  Handles user input
 
 */
 int main (int argc, char** argv) {
-    
+   
     char line[MAX_LINE];
-    char **tokens;
+    char** tokens;
     
-    int i;
-    int opt;
-
-    //FILE* masterInput = stdin;
     FILE* masterOutput = stdout;
-    
-    char* opts[3];
-    opts[0] = "exit";
-    opts[1] = "cd";
-    opts[2] = "pwd";
+
+    setPaths();
 
     // get a line from stdin and get the tokens
     printf("$> ");
-    while (fgets(line, MAX_LINE, stdin)) {
- 
-        opt = -1;
+    
+    while (fgets(line, MAX_LINE, stdin)) { 
  
         // remove the '\n' from the end of the line
         line[strlen(line)-1] = '\0';
         
-        tokens = gettokens(line);
+        tokens = gettokens(line); 
 
         masterOutput = outCheck(tokens);
 
-
-
-        if(tokens[0]){
-
-            //locate index of user command in opts array for switch
-            for (i = 0; i < 4; i++){
-                if (strcmp(tokens[0], opts[i]) == 0){
-                  opt = i;
-                }
-            }
-
-            switch(opt){
-                case 0://exit
-#if DEBUG            
-printf("exit command found\n");
-#endif
-                exit(0);
-                break;
-                case 1://cd
-#if DEBUG            
-printf("cd command found\n");
-#endif
-                cd(tokens, masterOutput);
-                break;
-                case 2://pwd      
-#if DEBUG            
-printf("pwd command found\n");
-#endif
-                pwd(tokens, masterOutput);
-                break;
-                
-                default:
-#if DEBUG            
-printf("external command found\n");
-#endif
-                runExternal(tokens, masterOutput);
-
-
-                break;
-            }
-        }
-
+        issueCommand(tokens, masterOutput);
 
         //return masterOutput to stdout if needed
         if (masterOutput != stdout) {
@@ -113,19 +67,47 @@ printf("external command found\n");
 }
 
 
+/*
+Handles user input
+
+*/
+
+int issueCommand(char**tokens, FILE* masterOutput){
+
+    int i;
+    int opt = -1;
+
+    char* opts[5];
+    opts[0] = "exit";
+    opts[1] = "cd";
+    opts[2] = "pwd";
 
 
+        if(tokens[0]){
 
+            //locate index of user command in opts array for switch
+            for (i = 0; i < 3; i++){
+                if (strcmp(tokens[0], opts[i]) == 0){
+                  opt = i;
+                }
+            }
 
-
-int issueCommand(char**tokens){
-
-
-
-
-
-
-
+            switch(opt){
+                case 0://exit
+                  exit(0);
+                  break;
+                case 1://cd
+                  cd(tokens, masterOutput);
+                  break;
+                case 2://pwd      
+                  pwd(tokens, masterOutput);
+                  break;
+                default:
+                  runExternal(tokens, masterOutput);
+                  break;
+            }
+        }
+  return 0;
 }
 
 
@@ -187,8 +169,14 @@ int runExternal(char **tokens, FILE* masterOutput){
     int status;
     pid_t pid;
     char **args;
+
+
+    args = getargs(tokens);
+
  
     if((pid = fork()) == -1){ //error
+
+
     }else if (pid == 0){ //child
         //TODO set up env?
 
@@ -196,11 +184,9 @@ int runExternal(char **tokens, FILE* masterOutput){
         //set childs I/O
         dup2(fileno(masterOutput), STDOUT_FILENO);
 
-
-        //create childs args
-        args = getargs(tokens);
-
         execvp(tokens[0], args);
+
+        fclose(masterOutput);
 
         exit(0);
     }else{ //parent
@@ -255,6 +241,8 @@ char **getargs(char** tokens){
     } 
   }
 
+  args[j] = 0;
+
   return args;
 
 }
@@ -293,8 +281,34 @@ printf("> found in token: %s\n", tokens[i]);
     }
   }
   return stdout;
-
 }
 
 
+/*
 
+  Adds programs in cwd to PATH env.
+  called at the start of the program cwd is changed
+
+*/
+
+int setPaths(){
+ 
+    char *oldPATH = getenv("PATH");
+
+    char *cwd;
+    char buff[MAX_LINE];
+    size_t size = MAX_LINE;
+
+    cwd = getcwd(buff, size);
+
+    char* newPATH = (char *)malloc(MAX_LINE * sizeof(char));
+ 
+    strcpy(newPATH, oldPATH);
+
+    strcat(newPATH, ":");
+    strcat(newPATH, cwd);
+
+    setenv("PATH", newPATH, 1);
+
+    return 0;
+}

@@ -14,9 +14,6 @@ any lines that contain a specified regular expression.
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
-#define thing(X) #X
-
 #define BUF_SIZE 1024
 #define DEBUG 1
  
