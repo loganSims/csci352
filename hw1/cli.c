@@ -6,14 +6,15 @@
 #include <wait.h>
 
 #define MAX_LINE  1024
-#define DEBUG     1
-
+#define DEBUG     0
 
 // Parsing function
-int issueCommand(char** tokens, FILE* masterOutput);
+int issueCommand(char** tokens);
 
 //  I/O functions
-FILE* outCheck(char** tokens);
+int outCheck(char** tokens);
+char** inCheck(char** tokens);
+char** getInput(char** tokens, FILE* infile, int start, int end);
 
 // Sets fref and shwoenv to PATH
 int setPaths();
@@ -22,10 +23,10 @@ int setPaths();
 char** getargs(char** tokens);
 
 //  command functions
-int pwd(char** tokens, FILE* masterOutput);
-int cd(char** tokens, FILE* masterOutput);
+int pwd(char** tokens);
+int cd(char** tokens);
 
-int runExternal(char** tokens, FILE* masterOutput);
+int runExternal(char** tokens);
 
 /*
   main function. 
@@ -35,8 +36,6 @@ int main (int argc, char** argv) {
 
     char line[MAX_LINE];
     char** tokens;
-
-    FILE* masterOutput = stdout;
 
     setPaths();
 
@@ -52,15 +51,16 @@ int main (int argc, char** argv) {
         tokens = gettokens(line); 
 
         //check output options
-        masterOutput = outCheck(tokens);
+        outCheck(tokens);
+
+        tokens = inCheck(tokens);
 
         //execute user command
-        issueCommand(tokens, masterOutput);
+        issueCommand(tokens);
 
-        //return masterOutput to stdout if needed
-        if (masterOutput != stdout) {
-            fclose(masterOutput);
-            masterOutput = stdout;
+        //return output to stdout
+        if(freopen("/dev/tty","w", stdout) == NULL){
+            printf("failed to change stdout back\n");
         }
 
         free(tokens);
@@ -71,7 +71,7 @@ int main (int argc, char** argv) {
 /*
    Handles user input.
  */
-int issueCommand(char**tokens, FILE* masterOutput){
+int issueCommand(char**tokens){
 
     int i;
     int opt = -1;
@@ -95,13 +95,13 @@ int issueCommand(char**tokens, FILE* masterOutput){
                 exit(0);
                 break;
             case 1://cd
-                cd(tokens, masterOutput);
+                cd(tokens);
                 break;
             case 2://pwd      
-                pwd(tokens, masterOutput);
+                pwd(tokens);
                 break;
             default:
-                runExternal(tokens, masterOutput);
+                runExternal(tokens);
                 break;
         }
     }
@@ -113,7 +113,7 @@ int issueCommand(char**tokens, FILE* masterOutput){
    Uses chdir() function.
    Uses pwd to display cwd on success.
  */
-int cd(char** tokens, FILE* masterOutput){
+int cd(char** tokens){
 
     char *dir = tokens[1];
     char succ[MAX_LINE];
@@ -125,18 +125,18 @@ int cd(char** tokens, FILE* masterOutput){
 
     //check for input
     if (!(tokens[1])) {
-        fprintf(masterOutput, "Please enter a directory.\n");
+        printf("Please enter a directory.\n");
         return 0;
     }
 
     //attempt to change directory
     if (!chdir(dir)){
-        fprintf(masterOutput, "%s", succ);
-        pwd(tokens, masterOutput);
-        fprintf(masterOutput, "\n");
+        printf("%s", succ);
+        pwd(tokens);
+        printf("\n");
     }else{
         output = strcat(fail, dir);
-        fprintf(masterOutput, "%s\n", output);
+        printf("%s\n", output);
     }
 
     return 0;
@@ -147,7 +147,7 @@ int cd(char** tokens, FILE* masterOutput){
    Used getcwd command to display
    current working directory.
  */
-int pwd(char** tokens, FILE* masterOutput){
+int pwd(char** tokens){
 
     char *cwd;
     char buff[MAX_LINE];
@@ -155,7 +155,7 @@ int pwd(char** tokens, FILE* masterOutput){
 
     cwd = getcwd(buff, size);
 
-    fprintf(masterOutput, "%s", cwd);
+    printf("%s", cwd);
 
     return 0;
 
@@ -168,7 +168,7 @@ int pwd(char** tokens, FILE* masterOutput){
    Builds arguments for child by using 
    getargs() defined below.  
  */
-int runExternal(char **tokens, FILE* masterOutput){
+int runExternal(char **tokens){
 
     int status;
     pid_t pid;
@@ -178,12 +178,11 @@ int runExternal(char **tokens, FILE* masterOutput){
 
     if((pid = fork()) == -1){ //error
 
-        fprintf(masterOutput, "failed to fork.");
+        printf("failed to fork.");
 
     }else if (pid == 0){ //child
 
-        //set childs I/O
-        dup2(fileno(masterOutput), STDOUT_FILENO);
+        //TODO? set childs I/O
 
         execvp(tokens[0], args);
 
@@ -239,12 +238,11 @@ char **getargs(char** tokens){
     return args;
 }
 /*
-   sets masterOutput to either stdout or a file
+   sets output stdout or a file
  */
-FILE* outCheck(char **tokens){
+int outCheck(char **tokens){
 
     int i;
-    FILE *newout;
 
     for (i = 0; tokens[i]; i++){
 
@@ -254,24 +252,115 @@ FILE* outCheck(char **tokens){
             printf("> found in token: %s\n", tokens[i]);
 #endif
             if(tokens[i][1] != '\0'){//no space
-                if((newout = fopen(&tokens[i][1],"a"))){
-                    return newout;
-                }else{
+                if((freopen(&tokens[i][1],"w", stdout)) == NULL){
                     printf("cannot open file %s to write\n", &tokens[i][1]);
                 }
             }else{//space after
-                if((newout = fopen(tokens[i+1],"a"))){
-                    return newout;
-                }else{
+                if((freopen(tokens[i+1],"w", stdout)) == NULL){
                     printf("cannot open file %s to write\n", tokens[i+1]);
                 }
             } 
         }
     }
-    return stdout;
+    return 0;
 }
+
 /*
-   Appends cwd to PATH env.
+   sets reads input file if present and appends to tokens.
+ */
+char** inCheck(char** tokens){
+
+    int i;
+    FILE * infile;
+
+    for (i = 0; tokens[i]; i++){
+
+        if(tokens[i][0] == '<'){ //stdin
+
+#if DEBUG
+            printf("< found in token: %s\n", tokens[i]);
+#endif
+            if(tokens[i][1] != '\0'){//no space
+                if((infile = fopen(&tokens[i][1],"r")) == NULL){
+                   printf("Cannot open file for reading\n");
+                }else{
+                   tokens = getInput(tokens, infile, i, i+1);
+                }
+            }else{//space after
+                if((infile = fopen(tokens[i+1],"r")) == NULL){ 
+                   printf("Cannot open file for reading\n");
+                }else{
+                   tokens = getInput(tokens, infile, i, (i+1));
+                }
+            } 
+        }
+    }
+    return tokens;
+}
+
+/*
+  Reads a file for input, appending it to
+  the current token commands.
+
+
+
+ */
+char** getInput(char** tokens, FILE* infile, int start, int end){
+
+    char** t;
+    char line[MAX_LINE];
+    int i = 0;
+    int size = start;
+
+    char** newtokens = (char**)malloc(start * sizeof(char*));
+    
+    memcpy(newtokens, tokens, (start * sizeof(char*)));
+
+    while (fgets(line, MAX_LINE, infile)) { 
+
+        line[strlen(line)-1] = '\0';
+
+        t = gettokens(line); 
+
+        //count size of t, add that to current size of newtokens
+        while(t[i]){size++; i++;};
+
+        //realloc space for t to be appended to newtokens
+        newtokens = (char**)realloc(newtokens, size * sizeof(char*));
+
+        //append t to newtokens
+        memcpy(newtokens + start, t, (i * sizeof(char*)));
+
+        //increment start to the new end of newtokens
+        start = start + i;
+
+        free(t);
+
+    }
+
+    //count size of tokens
+    i = 0;
+    while(tokens[i]){i++; size++;};
+        
+    //realloc space for the rest of the tokens to be appended to newtokens
+    newtokens = (char**)realloc(newtokens, size * sizeof(char*));
+
+    //append remaining tokens to newtokens
+    memcpy(newtokens+start, tokens + end, ((i - end) * sizeof(char *)));
+
+    free(tokens);
+
+    //NULL term newtokens
+    newtokens[start + (i-end)] = NULL;
+
+    return newtokens;
+
+}
+
+
+
+/*
+   Appends cwd to PATH env var.
    Called at the start of the program before 
    cwd is changed. Allows fref and showenv to
    be executed independent of cwd.

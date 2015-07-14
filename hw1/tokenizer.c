@@ -58,7 +58,8 @@ int collecttokens(char *line, char **output){
   int tokens = 0;
 
   pos = line; //used to read through line
- 
+  start = pos; 
+
   while (*pos != '\0'){ 
     if((*pos == ' ') && (!q)){ 
       if (readingToken == 1){ 
@@ -97,8 +98,8 @@ int collecttokens(char *line, char **output){
 
 /*
   Given starting and ending pointers into a string
-  returns a substring to the string.
-  first reads through substring to check for quotes,
+  returns a substring of the string.
+  First reads through substring to check for quotes,
   no space will be allocated for them as they are not
   counted as a character in a token.
 */
