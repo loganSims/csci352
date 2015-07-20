@@ -95,6 +95,9 @@ int main (int argc, char** argv) {
 /*
    Handles user input.
 
+   Input: Tokens from user.
+   Return: 0 for success. (this value is not used)
+
    Gets tokens already processed for
    I/O redirection.
 
@@ -102,6 +105,8 @@ int main (int argc, char** argv) {
 
    NOTE: if command not internal assumes 
    user is trying to run external command.
+
+
  */
 int issueCommand(char**tokens){
 
@@ -142,6 +147,9 @@ int issueCommand(char**tokens){
 /*
    Performs cd command.
 
+   Input: User tokens
+   Return: 0 (value not used)
+
    Uses chdir() function.
    Uses pwd to display cwd on success.
  */
@@ -175,6 +183,9 @@ int cd(char** tokens){
 }
 /*
    Performs pwd command.
+ 
+   Input: User tokens
+   Return: 0 (value not used)
 
    Used getcwd command to display
    current working directory.
@@ -194,6 +205,9 @@ int pwd(char** tokens){
 }
 /*
    Runs eternal commands. 
+   
+   Input: User tokens
+   Return: 0 (value not used)
 
    Uses fork and execvp to run child process
 
@@ -228,6 +242,10 @@ int runExternal(char **tokens){
     return 0;
 }
 /*
+   Input: User Tokens
+   Return: User tokens with I/O redirect 
+   commands removed.
+
    Creates args for external commands by
    removing I/O redirects from tokens
    if they exist.
@@ -269,6 +287,11 @@ char **getargs(char** tokens){
     return args;
 }
 /*
+   Handles output redirection.
+   
+   Input: User tokens
+   Return: 0 (value not used)
+
    Sets output to a file if output redirect
    is in a command.
  */
@@ -298,6 +321,12 @@ int outCheck(char **tokens){
 }
 
 /*
+   Handles input redirect
+  
+   Input: User tokens
+   Return: new tokens created from getInput().
+	   Refer to getInput() for details
+
    Reads tokens for input redirect.
    locates location in command for 
    getInput()
@@ -337,7 +366,18 @@ char** inCheck(char** tokens){
    Reads a file for input, appending it to
    the current token commands.
 
-   NOTE: When given an input file the CLI
+   Input: 
+	1. tokens: User tokens.
+	2. infile: The input file given by user
+	3. start: The start index of the input redirect command
+	4. end: The end index.
+   Return: Newly created tokens with contents of input file
+   appended into old tokens.
+
+
+   Inputs 3 and 4 are used for the 
+   append this function makes.
+   When given an input file the CLI
    subs the contents of the file in the 
    location of the input redirect command.
 
@@ -402,6 +442,10 @@ char** getInput(char** tokens, FILE* infile, int start, int end){
 
 /*
    Appends cwd to PATH env var.
+
+   Input: N/A
+   Returns: 0 (value not used)
+
    Called at the start of the program before 
    cwd is changed. Allows fref and showenv to
    be executed independent of cwd.
