@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -Wall -g -O3
-LDFLAGS = -g
+CFLAGS = -Wall
+LDFLAGS = 
 OBJECTS1 = tokenizer.o cli.o 
 OBJECTS2 = regexp.o fref.o
 OBJECTS3 = regexp.o showenv.o

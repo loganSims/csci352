@@ -1,3 +1,27 @@
+/*
+  Logan Sims
+  W01086217
+  Date: 7/20/2015
+
+  CSCI 352 
+  Assignment #1
+  CLI
+
+  A basic command line interpreter.
+
+  Has 3 internal commands:
+	1. exit
+		exits program
+	2. cd [dir] 
+		changes cwd to dir
+	3. pwd
+		displays cwd
+
+  Can also run external commands by
+  using fork/exec.
+
+ */
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -8,7 +32,8 @@
 #define MAX_LINE  1024
 #define DEBUG     0
 
-// Parsing function
+
+// handles user commands
 int issueCommand(char** tokens);
 
 //  I/O functions
@@ -16,7 +41,7 @@ int outCheck(char** tokens);
 char** inCheck(char** tokens);
 char** getInput(char** tokens, FILE* infile, int start, int end);
 
-// Sets fref and shwoenv to PATH
+// Sets cwd to PATH
 int setPaths();
 
 // setup external function args
@@ -25,12 +50,18 @@ char** getargs(char** tokens);
 //  command functions
 int pwd(char** tokens);
 int cd(char** tokens);
-
 int runExternal(char** tokens);
 
 /*
   main function. 
   Has main loop for user input.
+
+  Performs the following:
+    1. Adds cwd to path
+    3. Gets user input (loop begins)
+    2. Checks I/O options
+    3. Executes user command
+    4. Returns output to stdout if needed (loop ends)
  */
 int main (int argc, char** argv) {
 
@@ -39,26 +70,19 @@ int main (int argc, char** argv) {
 
     setPaths();
 
-    // get a line from stdin and get the tokens
     printf("$> ");
 
     while (fgets(line, MAX_LINE, stdin)) { 
 
-        // remove the '\n' from the end of the line
         line[strlen(line)-1] = '\0';
 
-        //get tokens
         tokens = gettokens(line); 
 
-        //check output options
         outCheck(tokens);
-
         tokens = inCheck(tokens);
 
-        //execute user command
         issueCommand(tokens);
 
-        //return output to stdout
         if(freopen("/dev/tty","w", stdout) == NULL){
             printf("failed to change stdout back\n");
         }
@@ -70,6 +94,14 @@ int main (int argc, char** argv) {
 }
 /*
    Handles user input.
+
+   Gets tokens already processed for
+   I/O redirection.
+
+   Based on user command calls functions.
+
+   NOTE: if command not internal assumes 
+   user is trying to run external command.
  */
 int issueCommand(char**tokens){
 
@@ -91,13 +123,13 @@ int issueCommand(char**tokens){
         }
 
         switch(opt){
-            case 0://exit
+            case 0:
                 exit(0);
                 break;
-            case 1://cd
+            case 1:
                 cd(tokens);
                 break;
-            case 2://pwd      
+            case 2:      
                 pwd(tokens);
                 break;
             default:
@@ -182,8 +214,6 @@ int runExternal(char **tokens){
 
     }else if (pid == 0){ //child
 
-        //TODO? set childs I/O
-
         execvp(tokens[0], args);
 
         exit(0);
@@ -201,6 +231,9 @@ int runExternal(char **tokens){
    Creates args for external commands by
    removing I/O redirects from tokens
    if they exist.
+
+   First counts size of args,
+   Then builds them.
  */
 char **getargs(char** tokens){
 
@@ -208,7 +241,6 @@ char **getargs(char** tokens){
     int i = 0;
     int j = 0;
 
-    //count size of args
     for (i = 0; tokens[i]; i++){
         if((tokens[i][0] == '>') || (tokens[i][0] == '<')){ 
             if(tokens[i][1] != '\0'){//no space
@@ -222,7 +254,6 @@ char **getargs(char** tokens){
     args = (char **)malloc((i-j) * sizeof(char **));
     j = 0;
 
-    //fill args
     for (i = 0; tokens[i]; i++){
         if((tokens[i][0] == '>') || (tokens[i][0] == '<')){ 
             if(tokens[i][1] == '\0'){//space between file, skip it
@@ -238,7 +269,8 @@ char **getargs(char** tokens){
     return args;
 }
 /*
-   sets output stdout or a file
+   Sets output to a file if output redirect
+   is in a command.
  */
 int outCheck(char **tokens){
 
@@ -266,7 +298,10 @@ int outCheck(char **tokens){
 }
 
 /*
-   sets reads input file if present and appends to tokens.
+   Reads tokens for input redirect.
+   locates location in command for 
+   getInput()
+
  */
 char** inCheck(char** tokens){
 
@@ -290,7 +325,7 @@ char** inCheck(char** tokens){
                 if((infile = fopen(tokens[i+1],"r")) == NULL){ 
                    printf("Cannot open file for reading\n");
                 }else{
-                   tokens = getInput(tokens, infile, i, (i+1));
+                   tokens = getInput(tokens, infile, i, (i+2));
                 }
             } 
         }
@@ -299,11 +334,17 @@ char** inCheck(char** tokens){
 }
 
 /*
-  Reads a file for input, appending it to
-  the current token commands.
+   Reads a file for input, appending it to
+   the current token commands.
 
+   NOTE: When given an input file the CLI
+   subs the contents of the file in the 
+   location of the input redirect command.
 
-
+   ex. 
+      echo < input.txt > out.txt
+      becomes...
+      echo Hello World > out.txt 
  */
 char** getInput(char** tokens, FILE* infile, int start, int end){
 
@@ -342,7 +383,8 @@ char** getInput(char** tokens, FILE* infile, int start, int end){
     i = 0;
     while(tokens[i]){i++; size++;};
         
-    //realloc space for the rest of the tokens to be appended to newtokens
+    //realloc space for the rest of the tokens 
+    //to be appended to newtokens
     newtokens = (char**)realloc(newtokens, size * sizeof(char*));
 
     //append remaining tokens to newtokens
@@ -356,7 +398,6 @@ char** getInput(char** tokens, FILE* infile, int start, int end){
     return newtokens;
 
 }
-
 
 
 /*
