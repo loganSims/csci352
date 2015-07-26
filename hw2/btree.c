@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 #define ORDER 2
+#define FILENAME "btreedata.txt"
 
 struct Data
 {
@@ -21,6 +24,22 @@ struct Node
   long offsets[(2 * ORDER) + 1];
   struct Data data[2 * ORDER];
 };
+
+struct Node *btree;
+
+/*
+ fucntion: saveNode
+ input: 1. node to be saved to external file
+ return: 1 on success (value isn't used)
+
+ Saves a node of the btree to external file.
+ */
+int saveNode(struct Node *node){
+  FILE *fd = fopen(FILENAME, "aw");
+  fwrite(node, sizeof(struct Node), 1, fd);
+  fclose(fd);
+  return 0;
+}
 
 /*
  function: searchNode
@@ -43,15 +62,28 @@ int searchNode(struct Node *node, struct Data *item){
 }
 
 
+int insert(struct Data *item){
+
+  //if btree is empty init root node
+  if (btree == NULL){
+    btree = malloc(sizeof(struct Node));
+    btree->data[0] = *item;
+    btree->count = 1;
+    saveNode(btree);
+  }
 
 
-int insert(struct Node *root, struct Data *item){
+  
+  
 
-  //search for item
-  searchNode(root, item);
-  //if search ends and leaf has room, add data item.
+  //else didn't find node
 
-  //
+
+
+       //if leaf 
+           //if room
+
+           //else split
 
 
   return 0;

@@ -27,14 +27,13 @@ int saveItem(struct Data *item);
 
 int main (int argc, char** argv) {
 
-
-  int p = 0;
-  int *pos = &p;
-
   char *filename = "inventory.txt";
   char line[BUF_SIZE];
 
   FILE *fd;
+
+  int p = 0;
+  int *pos = &p;
 
   fd = fopen(filename, "r");
 
@@ -42,48 +41,28 @@ int main (int argc, char** argv) {
     printf("File %s not found\n", filename);
   }else{
 
-    struct Data* item = malloc(sizeof(struct Data*));
+    struct Data *item = malloc(sizeof(struct Data));
 
     item->offset = ftell(fd);
 
     while(fgets(line, BUF_SIZE, fd)){
-#if DEBUG
-      printf("file offset: %d\n", item->offset);
-#endif
 
       setNumber(item, line, pos);
-#if DEBUG
-      printf("%s", item->code);
-#endif
       setDesc(item, line, pos);
-#if DEBUG
-      printf("%s", item->desc);
-#endif
       setPrice(item, line, pos);      
-#if DEBUG
-      printf("%d.%d", item->dollar, item->cent);
-#endif
       setCategory(item, line, pos);      
-#if DEBUG
-      printf("%s", item->cate);
-#endif
-      setStock(item, line, pos);
-#if DEBUG
-      printf(" %d ", item->stock);
-#endif      
+      setStock(item, line, pos);    
       setHist(item, line, pos);
-#if DEBUG
-      printf("%d ", item->history[0]);
-      printf("%d\n", item->history[11]);
-#endif
+
 
       //add item to b-tree
+      insert(item);
 
-      saveItem(item);
+      //saveItem(item);
 
 
       free(item);
-      struct Data *item = malloc(sizeof(struct Data*));
+      struct Data *item = malloc(sizeof(struct Data));
       item->offset = ftell(fd);
 
     }
@@ -92,7 +71,7 @@ int main (int argc, char** argv) {
   fclose(fd);
   }
 
-  //test read
+  /* test read
   fd = fopen("data.txt", "r");
   fseek(fd, sizeof(struct Data), SEEK_SET);
   struct Data *item = malloc(sizeof(struct Data));
@@ -100,7 +79,7 @@ int main (int argc, char** argv) {
   printf("code: %s\n", item->code); 
   printf("desc: %s\n", item->desc);
   fclose(fd);
-  //////
+  */
 
 
   return 0;

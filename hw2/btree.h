@@ -19,4 +19,4 @@ struct Node
   struct Data data[2 * ORDER];
 };
 
-int insert(struct Node *root, struct Data *item);
+int insert(struct Data *item);
