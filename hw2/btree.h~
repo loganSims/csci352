@@ -20,3 +20,5 @@ struct Node
 };
 
 int insert(struct Data *item);
+
+struct Node * getNode(int offset);

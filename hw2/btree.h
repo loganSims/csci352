@@ -14,9 +14,13 @@ struct Data
 
 struct Node
 {
+  long fileOffset;
   int count; //number of Data structs stored in node
+  int leaf;
   long offsets[(2 * ORDER) + 1];
   struct Data data[2 * ORDER];
 };
 
 int insert(struct Data *item);
+
+struct Node * getNode(int offset);

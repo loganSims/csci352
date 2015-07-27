@@ -27,7 +27,7 @@ int saveItem(struct Data *item);
 
 int main (int argc, char** argv) {
 
-  char *filename = "inventory.txt";
+  char *filename = "myinventory.txt";
   char line[BUF_SIZE];
 
   FILE *fd;
@@ -58,8 +58,6 @@ int main (int argc, char** argv) {
       //add item to b-tree
       insert(item);
 
-      //saveItem(item);
-
 
       free(item);
       struct Data *item = malloc(sizeof(struct Data));
@@ -67,19 +65,8 @@ int main (int argc, char** argv) {
 
     }
 
-
   fclose(fd);
   }
-
-  /* test read
-  fd = fopen("data.txt", "r");
-  fseek(fd, sizeof(struct Data), SEEK_SET);
-  struct Data *item = malloc(sizeof(struct Data));
-  fread(item, sizeof(struct Data), 1, fd);
-  printf("code: %s\n", item->code); 
-  printf("desc: %s\n", item->desc);
-  fclose(fd);
-  */
 
 
   return 0;

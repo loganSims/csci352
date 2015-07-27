@@ -20,7 +20,7 @@ struct Data
 
 struct Node
 {
-  int fileOffset;
+  long fileOffset;
   int count; //number of Data structs stored in node
   int leaf;
   long offsets[(2 * ORDER) + 1];
@@ -38,17 +38,24 @@ struct Node *btree;
  */
 int saveNode(struct Node *node){
 
-  //node hasn't been saved before
-  if (node->fileOffset == -1){
+  //node is root
+  if (node->fileOffset == -2){
+    FILE *fd = fopen(FILENAME, "w");
+    node->fileOffset = 0;
+    fwrite(node, sizeof(struct Node), 1, fd);
+    fclose(fd);
 
-    FILE *fd = fopen(FILENAME, "aw");
+  //node hadnt been saved yet
+  }else if (node->fileOffset == -1){
+
+    FILE *fd = fopen(FILENAME, "a");
     node->fileOffset = ftell(fd);
     fwrite(node, sizeof(struct Node), 1, fd);
     fclose(fd);
 
   }else{
 
-    FILE *fd = fopen(FILENAME, "w");
+    FILE *fd = fopen(FILENAME, "r+");
     fseek(fd, node->fileOffset, SEEK_SET);
     fwrite(node, sizeof(struct Node), 1, fd);
     fclose(fd);
@@ -56,6 +63,26 @@ int saveNode(struct Node *node){
   }
 
   return 0;
+}
+
+
+/*
+ fucntion: getNode
+ input: 1. offset of node in file.
+ return: Pointer to the node at offset.
+
+ Searches btree data file for a node.
+ */
+struct Node *getNode(long offset){
+
+  FILE *fd = fopen(FILENAME, "r");
+  
+  fseek(fd, offset, SEEK_SET);
+  struct Node *node = malloc(sizeof(struct Node));
+  fread(node, sizeof(struct Node), 1, fd);
+  fclose(fd);
+
+  return node;
 }
 
 /*
@@ -85,86 +112,122 @@ int searchNode(struct Node *node, struct Data *item){
  */
 int splitChild(struct Node *x, int i, struct Node *splitNode){
 
-  struct Node newNode;
-  newNode.leaf = splitNode->leaf;
-  newNode.count = ORDER;
-  newNode.fileOffset = -1;
+  struct Node *newNode = malloc(sizeof(struct Node));
+  newNode->leaf = splitNode->leaf;
+  newNode->count = (ORDER - 1);
+  newNode->fileOffset = -1;
+
   int j;
 
-  //give half of y's keys to newNode
+  //give some of splitNode's keys to newNode
   for(j = 0; j < (ORDER - 1); j++){
-    newNode.data[j] = splitNode->data[j+ORDER];
-    //splitNode->data[j+ORDER] = NULL;
+    newNode->data[j] = splitNode->data[j+ORDER];
   }
 
-  //pass y's children to newNode
-  if (!splitNode->leaf){
+  //pass splitNode's children to newNode
+  if (!(splitNode->leaf)){
     for(j = 0; j < ORDER; j++){
-      newNode.offsets[j] = splitNode->offsets[j+ORDER];
+      newNode->offsets[j] = splitNode->offsets[j+ORDER];
       splitNode->offsets[j+ORDER] = -1;
     }  
   }
 
-  splitNode->count = ORDER-1;
+  splitNode->count = (ORDER - 1);
 
   //shift x's top offsets to right
   for (j = x->count; j > i; j--){
     x->offsets[j+1] = x->offsets[j];
   }
 
-  saveNode(&newNode);
-  x->offsets[i+1] = newNode.fileOffset;
+  saveNode(newNode);
+  x->offsets[i+1] = newNode->fileOffset;
 
   //shift x's top keys to the right
   for (j = x->count-1; j > i; j--){
     x->data[j+1] = x->data[j];
   }
 
-  x->data[i] = splitNode->data[i];
-  //splitNode->data[i] = NULL;
-  x->count++;
+  x->data[i] = splitNode->data[ORDER-1];
+  x->count = ((x->count) + 1);
 
   //save nodes
   saveNode(x);
   saveNode(splitNode);
+  saveNode(newNode);
 
   return 0;
 }
+
+int insertNonfull(struct Node *node, struct Data *item){
+  int i = 0; 
+  i = node->count;
+  if (node->leaf){
+    while((i>=1)&&(strcmp(item->code, node->data[i-1].code) < 0)){
+      node->data[i] = node->data[i-1];
+      i--;
+    }
+    node->data[i] = *item;
+    (node->count)++;
+    saveNode(node);
+  }else{ 
+    while((i>=1)&&(strcmp(item->code, node->data[i-1].code) < 0)){
+      i--;
+    }
+
+    struct Node *nextNode = getNode(node->offsets[i]); 
+
+ 
+    if (nextNode->count == ((2*ORDER)-1)){
+      splitChild(node, i, nextNode);
+      if (strcmp(item->code, node->data[i].code) > 0){
+        i++;
+      }
+    }
+
+    insertNonfull(nextNode, item);
+
+    free(nextNode);
+  }
+  return 0;
+}
+
 
 int insert(struct Data *item){
 
   //if btree is empty init root node
   if (btree == NULL){
+    printf("setting up btree\n");
     btree = malloc(sizeof(struct Node));
     btree->data[0] = *item;
     btree->count = 1;
-    btree->leaf = 0;
-    btree->fileOffset = -1;
+    btree->leaf = 1;
+    btree->fileOffset = -2;
     saveNode(btree);
     return 0;
   }
 
   if (btree->count == ((2*ORDER)-1)){
+
     struct Node *newRoot = malloc(sizeof(struct Node));
     newRoot->leaf = 0;
     newRoot->count = 0;
+    newRoot->fileOffset = -1;
     saveNode(newRoot);
-    
+ 
     //sawp old root and new root in file.
     btree->fileOffset = newRoot->fileOffset;
     newRoot->fileOffset = 0;
-
-    newRoot->offsets[0] = btree->fileOffset;
+    
+    newRoot->offsets[0] = btree->fileOffset; 
 
     splitChild(newRoot, 0, btree);
     
-    free(btree);
-    btree = newRoot;
-
-    insertNonfull(item);
+    insertNonfull(newRoot, item);
+    
+    btree = getNode(0);
 
   }else{
-    insertNonfull(item);
+    insertNonfull(btree, item);
   }
 
 
