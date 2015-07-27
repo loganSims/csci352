@@ -94,25 +94,25 @@ int splitChild(struct Node *x, int i, struct Node *splitNode){
 
   struct Node *newNode = malloc(sizeof(struct Node));
   newNode->leaf = splitNode->leaf;
-  newNode->count = (ORDER - 1);
+  newNode->count = ORDER;
   newNode->fileOffset = -1;
 
   int j;
 
-  //give some of splitNode's keys to newNode
-  for(j = 0; j < (ORDER - 1); j++){
+  //give some of splitNode's data to newNode
+  for(j = 0; j < ORDER; j++){
     newNode->data[j] = splitNode->data[j+ORDER];
+    (splitNode->count)--;
   }
 
   //pass splitNode's children to newNode
   if (!(splitNode->leaf)){
-    for(j = 0; j < ORDER; j++){
+    for(j = 0; j <= ORDER; j++){
       newNode->offsets[j] = splitNode->offsets[j+ORDER];
       splitNode->offsets[j+ORDER] = -1;
     }  
   }
-
-  splitNode->count = (ORDER - 1);
+  //TODO
 
   //shift x's top offsets to right
   for (j = x->count; j > i; j--){
@@ -127,7 +127,8 @@ int splitChild(struct Node *x, int i, struct Node *splitNode){
     x->data[j+1] = x->data[j];
   }
 
-  x->data[i] = splitNode->data[ORDER-1];
+  x->data[i] = splitNode->data[ORDER];
+  (splitNode->count)--;
   x->count = ((x->count) + 1);
 
   //save nodes
@@ -142,7 +143,7 @@ int insertNonfull(struct Node *node, struct Data *item){
   int i = 0; 
   i = node->count;
   if (node->leaf){
-    while((i>=1)&&(strcmp(item->code, node->data[i-1].code) < 0)){
+    while((i >= 1)&&(strcmp(item->code, node->data[i-1].code) < 0)){
       node->data[i] = node->data[i-1];
       i--;
     }
@@ -186,7 +187,7 @@ int insert(struct Data *item){
     return 0;
   }
 
-  if (btree->count == ((2*ORDER)-1)){
+  if (btree->count == (2*ORDER)){
 
     struct Node *newRoot = malloc(sizeof(struct Node));
     newRoot->leaf = 0;
