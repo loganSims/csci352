@@ -112,9 +112,8 @@ int splitChild(struct Node *x, int i, struct Node *splitNode){
       splitNode->offsets[j+ORDER] = -1;
     }  
   }
-  //TODO
 
-  //shift x's top offsets to right
+  //shift x's offsets to right
   for (j = x->count; j > i; j--){
     x->offsets[j+1] = x->offsets[j];
   }
@@ -122,14 +121,15 @@ int splitChild(struct Node *x, int i, struct Node *splitNode){
   saveNode(newNode);
   x->offsets[i+1] = newNode->fileOffset;
 
-  //shift x's top keys to the right
-  for (j = x->count-1; j > i; j--){
+  //TODO
+  //shift x's data to the right
+  for (j = x->count-1; j >= i; j--){
     x->data[j+1] = x->data[j];
   }
 
-  x->data[i] = splitNode->data[ORDER];
+  x->data[i] = splitNode->data[ORDER-1];
   (splitNode->count)--;
-  x->count = ((x->count) + 1);
+  (x->count)++;
 
   //save nodes
   saveNode(x);
