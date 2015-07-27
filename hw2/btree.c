@@ -28,15 +28,15 @@ int saveNode(struct Node *node){
   }else if (node->fileOffset == -1){
 
     FILE *fd = fopen(FILENAME, "r+");
-    fseek(fd, 0, SEEK_END);
-    node->fileOffset = ftell(fd);
+    lseek(fileno(fd), 0, SEEK_END);
+    node->fileOffset = lseek(fileno(fd), 0, SEEK_END);
     fwrite(node, sizeof(struct Node), 1, fd);
     fclose(fd);
 
   }else{
 
     FILE *fd = fopen(FILENAME, "r+");
-    fseek(fd, node->fileOffset, SEEK_SET);
+    lseek(fileno(fd), node->fileOffset, SEEK_SET);
     fwrite(node, sizeof(struct Node), 1, fd);
     fclose(fd);
 
@@ -53,11 +53,11 @@ int saveNode(struct Node *node){
 
  Searches btree data file for a node.
  */
-struct Node *getNode(long offset){
+struct Node *getNode(int offset){
 
   FILE *fd = fopen(FILENAME, "r");
   
-  fseek(fd, offset, SEEK_SET);
+  lseek(fileno(fd), offset, SEEK_CUR);
   struct Node *node = malloc(sizeof(struct Node));
   fread(node, sizeof(struct Node), 1, fd);
   fclose(fd);
@@ -209,10 +209,7 @@ int insert(struct Data *item){
   }else{
     insertNonfull(btree, item);
   }
-
-
   return 0;
-
 }
 
 /*

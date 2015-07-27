@@ -137,7 +137,7 @@ int setCategory(struct Data* item, char* line, int* pos){
     i++;
   }
 
-  while (j < 12){
+  while (j < 11){
     item->cate[j] = ' ';
     j++;
   }
