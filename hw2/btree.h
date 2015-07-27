@@ -9,7 +9,7 @@ struct Data
   char cate[13];
   int stock;
   int history[13];
-  int offset; //location of data in inventory.txt
+  //int offset; //location of data in inventory.txt
 };
 
 struct Node
@@ -23,4 +23,4 @@ struct Node
 
 int insert(struct Data *item);
 
-struct Node * getNode(int offset);
+struct Node *getNode(long offset);

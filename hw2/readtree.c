@@ -17,11 +17,16 @@ int main (int argc, char** argv) {
   for(i = 0; i < root->count; i++){ 
     printf("Code %d: %s\n", i, root->data[i].code);
   }
+  
+  printf("offsets[0]: %lu\n", root->offsets[0]);
+  printf("offsets[1]: %lu\n", root->offsets[1]);
+
   printf("Count: %d\n", root->count);
 
   printf("leaf: %d\n", root->leaf);
 
-  struct Node *node1 = getNode(552);
+  struct Node *node1 = getNode(root->offsets[0]);
+
   for(i = 0; i < node1->count; i++){ 
     printf("Code %d: %s\n", i, node1->data[i].code);
   }
@@ -30,7 +35,8 @@ int main (int argc, char** argv) {
 
   printf("leaf: %d\n", node1->leaf);
 
-  struct Node *node2 = getNode(1104);
+  struct Node *node2 = getNode(root->offsets[1]);
+
   for(i = 0; i < node2->count; i++){ 
     printf("Code %d: %s\n", i, node2->data[i].code);
   }

@@ -1,31 +1,10 @@
+#include "btree.h"
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 
-#define ORDER 2
 #define FILENAME "btreedata.txt"
-
-struct Data
-{
-  char code[9];
-  char desc[31];
-  int dollar;
-  int cent; 
-  char cate[13];
-  int stock;
-  int history[13];
-  int offset; //location of data in inventory.txt
-};
-
-struct Node
-{
-  long fileOffset;
-  int count; //number of Data structs stored in node
-  int leaf;
-  long offsets[(2 * ORDER) + 1];
-  struct Data data[2 * ORDER];
-};
 
 struct Node *btree;
 
@@ -48,7 +27,8 @@ int saveNode(struct Node *node){
   //node hadnt been saved yet
   }else if (node->fileOffset == -1){
 
-    FILE *fd = fopen(FILENAME, "a");
+    FILE *fd = fopen(FILENAME, "r+");
+    fseek(fd, 0, SEEK_END);
     node->fileOffset = ftell(fd);
     fwrite(node, sizeof(struct Node), 1, fd);
     fclose(fd);

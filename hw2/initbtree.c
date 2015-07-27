@@ -43,8 +43,6 @@ int main (int argc, char** argv) {
 
     struct Data *item = malloc(sizeof(struct Data));
 
-    item->offset = ftell(fd);
-
     while(fgets(line, BUF_SIZE, fd)){
 
       setNumber(item, line, pos);
@@ -54,14 +52,12 @@ int main (int argc, char** argv) {
       setStock(item, line, pos);    
       setHist(item, line, pos);
 
-
       //add item to b-tree
       insert(item);
 
 
       free(item);
-      struct Data *item = malloc(sizeof(struct Data));
-      item->offset = ftell(fd);
+      item = malloc(sizeof(struct Data));
 
     }
 
@@ -141,12 +137,11 @@ int setCategory(struct Data* item, char* line, int* pos){
     i++;
   }
 
-  //might not need this part
   while (j < 12){
     item->cate[j] = ' ';
     j++;
   }
-  //////////////////////////
+
   item->cate[j] = '\0';
 
   *pos = i;

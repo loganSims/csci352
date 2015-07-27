@@ -13,7 +13,7 @@ initbtree:	$(OBJECTS1)
 readtree:	$(OBJECTS2)
 	$(CC) -o $@ $(LDFLAGS) $(OBJECTS2)
 
-%.o:	%.c
+%.o:	%.c %.h
 	$(CC) -c $(CFLAGS) $< -o $@
 
 clean:
