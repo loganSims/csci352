@@ -11,6 +11,8 @@ int main (int argc, char** argv) {
 
   int i;
 
+  printf("page size: %lu\n", sizeof(struct Node));
+
   struct Node *root = getNode(0);
   for(i = 0; i < root->count; i++){ 
     printf("Code %d: %s\n", i, root->data[i].code);
