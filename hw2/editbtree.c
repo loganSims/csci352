@@ -21,7 +21,7 @@
 int getTransaction(char *line, char *action, char *code);
 int exeAction(char *action, char *code, char *line, int i);
 
-int sale(char *action, char *code, char *line, int i);
+int stockChange(char *action, char *code, char *line, int i);
 int updateHistory(struct Data *item, int sale);
 
 int main (int argc, char** argv) {
@@ -117,13 +117,13 @@ int exeAction(char *action, char *code, char *line, int i){
 #if DEBUG
             printf("sale\n");
 #endif
-            sale(action, code, line, i);
+            stockChange(action, code, line, i);
             break;
         case 1:
 #if DEBUG
             printf("delivery\n");
 #endif
-
+            stockChange(action, code, line, i);
             break;
         case 2:      
 #if DEBUG
@@ -149,7 +149,7 @@ int exeAction(char *action, char *code, char *line, int i){
 
 }
 
-int sale(char *action, char *code, char *line, int i){
+int stockChange(char *action, char *code, char *line, int i){
 
   int j = 0;
   int newStock;
@@ -170,16 +170,25 @@ int sale(char *action, char *code, char *line, int i){
     }
 
     line[i] = '\0';
-    newStock = (node->data[dataIndex].stock) - atoi(amount); 
- 
+
+    if (strcmp(action, "SALE") == 0){
+      newStock = (node->data[dataIndex].stock) - atoi(amount); 
+    }else{
+      newStock = (node->data[dataIndex].stock) + atoi(amount); 
+    }
+
 #if DEBUG
     printf("old stock: %d\n", node->data[dataIndex].stock);
-    printf("sale amount: %d\n", atoi(amount));
+    printf("transaction: %s\n", action);
+    printf("amount: %d\n", atoi(amount));
     printf("newStock: %d\n", newStock);
 #endif
 
     node->data[dataIndex].stock = newStock;
-    updateHistory(&(node->data[dataIndex]), atoi(amount));
+
+    if (strcmp(action, "SALE")){
+      updateHistory(&(node->data[dataIndex]), atoi(amount));
+    }
 
     saveNode(node);
 
@@ -190,8 +199,8 @@ int sale(char *action, char *code, char *line, int i){
   return 0;
 }
 
-int updateHistory(struct Data *item, int sale){
-
+int updateHistory(struct Data *item, int sale){ 
+  
   int i;
   for (i = 10; i >= 0; i--){
     item->history[i+1] = item->history[i];
