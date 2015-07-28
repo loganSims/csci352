@@ -7,6 +7,7 @@
 #define FILENAME "btreedata.txt"
 
 struct Node *btree;
+struct Node *found;
 
 /*
  fucntion: saveNode
@@ -220,11 +221,22 @@ int insert(struct Data *item){
  searches b-tree for item.
 
  */
-int search(char *code){
+int search(struct Node *node, char *code, struct Node *found){
+  int i = 0;
+  while ((i < node->count) && (strcmp(code, node->data[i].code) > 0 )){
+    i++;
+  }
 
+  if ((i <= node->count) && (strcmp(code, node->data[i].code) == 0)){
+    found = node;
+    return i;
+  }
 
-
-  return 0;
+  if (node->leaf){ 
+    return -1;
+  }else{
+    return search(getNode(node->offsets[i]), code, found);  
+  }
 }
 
 

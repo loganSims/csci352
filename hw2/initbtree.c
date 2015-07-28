@@ -27,7 +27,7 @@ int saveItem(struct Data *item);
 
 int main (int argc, char** argv) {
 
-  char *filename = "myinventory.txt";
+  char *filename = "inventory.txt";
   char line[BUF_SIZE];
 
   FILE *fd;
