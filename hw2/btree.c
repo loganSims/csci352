@@ -123,7 +123,7 @@ int splitChild(struct Node *x, int i, struct Node *splitNode){
 
   //TODO
   //shift x's data to the right
-  for (j = x->count-1; j >= i; j--){
+  for (j = x->count; j >= i; j--){
     x->data[j+1] = x->data[j];
   }
 
@@ -164,7 +164,7 @@ int insertNonfull(struct Node *node, struct Data *item){
       }
     }
 
-    insertNonfull(nextNode, item);
+    insertNonfull(getNode(node->offsets[i]), item);
 
     free(nextNode);
   }
