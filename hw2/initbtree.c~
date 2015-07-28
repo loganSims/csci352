@@ -32,14 +32,6 @@ int main (int argc, char** argv) {
 
   FILE *fd;
 
-  int p = 0;
-  int *pos = &p;
-
-  //init btree
-  struct Node btree;
-  btree.count = 0;
-  btree.offsets[0] = 0;
-
   fd = fopen(filename, "r");
 
   if (fd == NULL){
@@ -48,44 +40,37 @@ int main (int argc, char** argv) {
 
     struct Data *item = malloc(sizeof(struct Data));
 
-    item->offset = ftell(fd);
-
     while(fgets(line, BUF_SIZE, fd)){
 
-      setNumber(item, line, pos);
-      setDesc(item, line, pos);
-      setPrice(item, line, pos);      
-      setCategory(item, line, pos);      
-      setStock(item, line, pos);    
-      setHist(item, line, pos);
 
-
+      buildData(item, line);
       //add item to b-tree
-      insert(&btree, item);
-
-      //saveItem(item);
+      insert(item);
 
 
       free(item);
-      struct Data *item = malloc(sizeof(struct Data));
-      item->offset = ftell(fd);
+      item = malloc(sizeof(struct Data));
 
     }
-
 
   fclose(fd);
   }
 
-  /* test read
-  fd = fopen("data.txt", "r");
-  fseek(fd, sizeof(struct Data), SEEK_SET);
-  struct Data *item = malloc(sizeof(struct Data));
-  fread(item, sizeof(struct Data), 1, fd);
-  printf("code: %s\n", item->code); 
-  printf("desc: %s\n", item->desc);
-  fclose(fd);
-  */
 
+  return 0;
+}
+
+int buildData(struct Data *item, char *line){
+
+  int p = 0;
+  int *pos = &p;
+
+  setNumber(item, line, pos);
+  setDesc(item, line, pos);
+  setPrice(item, line, pos);      
+  setCategory(item, line, pos);      
+  setStock(item, line, pos);    
+  setHist(item, line, pos);
 
   return 0;
 }
@@ -159,12 +144,11 @@ int setCategory(struct Data* item, char* line, int* pos){
     i++;
   }
 
-  //might not need this part
-  while (j < 12){
+  while (j < 11){
     item->cate[j] = ' ';
     j++;
   }
-  //////////////////////////
+
   item->cate[j] = '\0';
 
   *pos = i;

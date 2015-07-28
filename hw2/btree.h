@@ -24,4 +24,8 @@ struct Node
 
 int insert(struct Data *item);
 
+int search(struct Node *node, char *code, struct Node *found);
+
 struct Node *getNode(int offset);
+
+int buildData(struct Data *item, char *line);
