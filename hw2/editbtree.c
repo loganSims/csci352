@@ -21,6 +21,9 @@
 int getTransaction(char *line, char *action, char *code);
 int exeAction(char *action, char *code, char *line, int i);
 
+int sale(char *action, char *code, char *line, int i);
+int updateHistory(struct Data *item, int sale);
+
 int main (int argc, char** argv) {
 
 
@@ -114,7 +117,7 @@ int exeAction(char *action, char *code, char *line, int i){
 #if DEBUG
             printf("sale\n");
 #endif
-
+            sale(action, code, line, i);
             break;
         case 1:
 #if DEBUG
@@ -145,3 +148,56 @@ int exeAction(char *action, char *code, char *line, int i){
   return 0;
 
 }
+
+int sale(char *action, char *code, char *line, int i){
+
+  int j = 0;
+  int newStock;
+  int dataIndex;
+  struct Node *root = getNode(0);
+  struct Node *node = malloc(sizeof(struct Node));
+
+  if ((dataIndex = search(root, code, node)) == -1){
+    printf("Can't find item code: %s\n", code);
+    return 0;
+  }else{
+    char amount[4];
+    i++;
+    while(line[i] != '\0'){
+      amount[j] = line[i];
+      j++;
+      i++;
+    }
+
+    line[i] = '\0';
+    newStock = (node->data[dataIndex].stock) - atoi(amount); 
+ 
+#if DEBUG
+    printf("old stock: %d\n", node->data[dataIndex].stock);
+    printf("sale amount: %d\n", atoi(amount));
+    printf("newStock: %d\n", newStock);
+#endif
+
+    node->data[dataIndex].stock = newStock;
+    updateHistory(&(node->data[dataIndex]), atoi(amount));
+
+    saveNode(node);
+
+  }
+
+  free(root);
+  free(node);
+  return 0;
+}
+
+int updateHistory(struct Data *item, int sale){
+
+  int i;
+  for (i = 10; i >= 0; i--){
+    item->history[i+1] = item->history[i];
+  }
+  item->history[0] = sale;
+  return 0;
+}
+
+

@@ -26,6 +26,7 @@ int main (int argc, char** argv) {
   printf("offsets[4]: %d\n", root->offsets[4]);
 
   printf("Count: %d\n", root->count);
+  printf("Stock: %d\n", root->data[0].stock);
 
   printf("leaf: %d\n\n\n", root->leaf);
 

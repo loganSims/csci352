@@ -122,7 +122,6 @@ int splitChild(struct Node *x, int i, struct Node *splitNode){
   saveNode(newNode);
   x->offsets[i+1] = newNode->fileOffset;
 
-  //TODO
   //shift x's data to the right
   for (j = x->count; j >= i; j--){
     x->data[j+1] = x->data[j];
@@ -216,9 +215,10 @@ int insert(struct Data *item){
 /*
  function: search
  input: 1. The item code being searched for in b-tree
- returns: ???
+ returns: index of data item in found node. 
 
- searches b-tree for item.
+ searches b-tree for item. sets found to the node with the 
+ data item.
 
  */
 int search(struct Node *node, char *code, struct Node *found){
@@ -228,7 +228,7 @@ int search(struct Node *node, char *code, struct Node *found){
   }
 
   if ((i <= node->count) && (strcmp(code, node->data[i].code) == 0)){
-    found = node;
+    *found = *node;
     return i;
   }
 
