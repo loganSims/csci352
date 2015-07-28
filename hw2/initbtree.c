@@ -26,8 +26,13 @@ int setHist(struct Data *item, char *line, int *pos);
 int saveItem(struct Data *item);
 
 int main (int argc, char** argv) {
+  
+  if (argc < 2){
+    printf("usage: ./initbtree [INVENTORY FILENAME]\n");
+    return 0;
+  }
 
-  char *filename = "inventory.txt";
+  char *filename = argv[1];
   char line[BUF_SIZE];
 
   FILE *fd;
