@@ -151,14 +151,13 @@ int insertNonfull(struct Node *node, struct Data *item){
     (node->count)++;
     saveNode(node);
   }else{ 
-    while((i>=1)&&(strcmp(item->code, node->data[i-1].code) < 0)){
+    while(( i>=1 )&&(strcmp(item->code, node->data[i-1].code) < 0)){
       i--;
     }
-
+    
     struct Node *nextNode = getNode(node->offsets[i]); 
-
  
-    if (nextNode->count == ((2*ORDER)-1)){
+    if (nextNode->count == (2*ORDER)){
       splitChild(node, i, nextNode);
       if (strcmp(item->code, node->data[i].code) > 0){
         i++;
@@ -188,7 +187,7 @@ int insert(struct Data *item){
   }
 
   if (btree->count == (2*ORDER)){
-
+    
     struct Node *newRoot = malloc(sizeof(struct Node));
     newRoot->leaf = 0;
     newRoot->count = 0;
