@@ -114,31 +114,26 @@ int exeAction(char *action, char *code, char *line, int i){
 #if DEBUG
             printf("sale\n");
 #endif
-
             break;
         case 1:
 #if DEBUG
             printf("delivery\n");
 #endif
-
             break;
         case 2:      
 #if DEBUG
             printf("new product\n");
 #endif
-
             break;
         case 3:      
 #if DEBUG
             printf("delete\n");
 #endif
-
             break;
         case 4:      
 #if DEBUG
             printf("price\n");
 #endif
-
             break;
     }
   
