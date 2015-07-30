@@ -50,11 +50,6 @@ int main (int argc, char** argv) {
 
       //get transaction
       i = getTransaction(line, action, code);
-#if DEBUG
-      printf("transaction: %s  ", action);
-      printf("code: %s\n", code);
-      printf("next character at: %d\n", i);
-#endif
 
       //perform transaction
       exeAction(action, code, line, i);

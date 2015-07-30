@@ -237,7 +237,6 @@ int search(struct Node *node, char *code, struct Node *found){
   }
 
   if ((i < node->count) && (strcmp(code, node->data[i].code) == 0)){
-    found = malloc(sizeof(struct Node));
     *found = *node;
     return i;
   }
