@@ -22,6 +22,8 @@ struct Node
   struct Data data[2 * ORDER];
 };
 
+int initNode(struct Node *node);
+
 int insert(struct Data *item);
 
 int search(struct Node *node, char *code, struct Node *found);

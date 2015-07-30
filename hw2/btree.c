@@ -7,7 +7,18 @@
 #define FILENAME "btreedata.txt"
 
 struct Node *btree;
-struct Node *found;
+
+int initNode(struct Node *node){
+  int i;
+  node->leaf = 0;
+  node->fileOffset = -1;
+  node->count = 0;
+  for (i = 0; i <= (ORDER*2); i++){
+    node->offsets[i] = -1;
+  }
+
+  return 0;
+}
 
 /*
  fucntion: saveNode
@@ -189,9 +200,7 @@ int insert(struct Data *item){
   if (btree->count == (2*ORDER)){
     
     struct Node *newRoot = malloc(sizeof(struct Node));
-    newRoot->leaf = 0;
-    newRoot->count = 0;
-    newRoot->fileOffset = -1;
+    initNode(newRoot);
     saveNode(newRoot);
  
     //sawp old root and new root in file.
@@ -227,7 +236,8 @@ int search(struct Node *node, char *code, struct Node *found){
     i++;
   }
 
-  if ((i <= node->count) && (strcmp(code, node->data[i].code) == 0)){
+  if ((i < node->count) && (strcmp(code, node->data[i].code) == 0)){
+    found = malloc(sizeof(struct Node));
     *found = *node;
     return i;
   }
@@ -239,12 +249,11 @@ int search(struct Node *node, char *code, struct Node *found){
   }
 }
 
-//////////////////////////////
-
-
+/* Beginning of inventory item set functions */
 
 
 int setNumber(struct Data* item, char* line, int* pos){
+
   
   int i;
 
