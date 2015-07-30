@@ -19,10 +19,11 @@
 
 
 int getTransaction(char *line, char *action, char *code);
-int exeAction(char *action, char *code, char *line, int i);
+int exeAction(char *action, char *code, char *line, int linepos);
 
-int stockChange(char *action, char *code, char *line, int i);
+int itemChange(char *action, char *code, char *line, int linepos);
 int updateHistory(struct Data *item, int sale);
+int changePrice(char *line, struct Node *node, int dataIndex, int linepos);
 
 int main (int argc, char** argv) {
 
@@ -62,6 +63,17 @@ int main (int argc, char** argv) {
   return 0;
 }
 
+/*
+  function: getTransaction
+  Input: 1. line: The transaction line.
+         2. action: A null char* to be filled with action in lin.
+         3. code: A null char* to be filled with item code in line.
+  Return: The index in line after item code. Used in other functions
+          for quick access.
+
+  Reads through line character by 
+  character filling other inputs with data. 
+ */
 int getTransaction(char *line, char *action, char *code){
 
   int i = 0;
@@ -83,12 +95,11 @@ int getTransaction(char *line, char *action, char *code){
   }
 
   code[j] = '\0';
-
   return i;
 
 }
 
-int exeAction(char *action, char *code, char *line, int i){
+int exeAction(char *action, char *code, char *line, int linepos){
 
     int j;
     int act = -1;
@@ -112,13 +123,13 @@ int exeAction(char *action, char *code, char *line, int i){
 #if DEBUG
             printf("sale\n");
 #endif
-            stockChange(action, code, line, i);
+            itemChange(action, code, line, linepos);
             break;
         case 1:
 #if DEBUG
             printf("delivery\n");
 #endif
-            stockChange(action, code, line, i);
+            itemChange(action, code, line, linepos);
             break;
         case 2:      
 #if DEBUG
@@ -136,6 +147,7 @@ int exeAction(char *action, char *code, char *line, int i){
 #if DEBUG
             printf("price\n");
 #endif
+            itemChange(action, code, line, linepos);
 
             break;
     }
@@ -144,45 +156,44 @@ int exeAction(char *action, char *code, char *line, int i){
 
 }
 
-int stockChange(char *action, char *code, char *line, int i){
+int itemChange(char *action, char *code, char *line, int linepos){
 
   int j = 0;
   int newStock;
   int dataIndex;
+  char amount[4];
   struct Node *root = getNode(0);
   struct Node *node = malloc(sizeof(struct Node));
 
+  //Part (a) search for item in question
   if ((dataIndex = search(root, code, node)) == -1){
     printf("Can't find item code: %s\n", code);
     return 0;
   }else{
-    char amount[4];
-    i++;
-    while(line[i] != '\0'){
-      amount[j] = line[i];
-      j++;
-      i++;
+
+
+    if (strcmp(action, "PRICE") != 0){
+      linepos++;
+
+      while(line[linepos] != '\0'){
+        amount[j] = line[linepos];
+        j++;
+        linepos++;
+      }
+      line[linepos] = '\0';
     }
 
-    line[i] = '\0';
 
+    //Part (b) perform transaction
     if (strcmp(action, "SALE") == 0){
       newStock = (node->data[dataIndex].stock) - atoi(amount); 
-    }else{
-      newStock = (node->data[dataIndex].stock) + atoi(amount); 
-    }
-
-#if DEBUG
-    printf("old stock: %d\n", node->data[dataIndex].stock);
-    printf("transaction: %s\n", action);
-    printf("amount: %d\n", atoi(amount));
-    printf("newStock: %d\n", newStock);
-#endif
-
-    node->data[dataIndex].stock = newStock;
-
-    if (strcmp(action, "SALE")){
+      node->data[dataIndex].stock = newStock;
       updateHistory(&(node->data[dataIndex]), atoi(amount));
+    }else if (strcmp(action, "DELIVERY") == 0){
+      newStock = (node->data[dataIndex].stock) + atoi(amount); 
+      node->data[dataIndex].stock = newStock;
+    }else{
+      changePrice(line, node, dataIndex, linepos);
     }
 
     saveNode(node);
@@ -193,6 +204,40 @@ int stockChange(char *action, char *code, char *line, int i){
   free(node);
   return 0;
 }
+
+int changePrice(char *line, struct Node *node, int dataIndex, int linepos){
+
+  int i = 0;
+  char dollars[5];
+  char cents[3];
+
+  linepos++;
+
+  while(line[linepos] != '.'){
+    dollars[i] = line[linepos];
+    linepos++;
+    i++;
+  }
+
+  i = 0;
+  linepos++;
+
+  while((line[linepos] != '\n') && (line[linepos] != EOF)){
+    cents[i] = line[linepos];
+    linepos++;
+    i++;
+  }
+
+  node->data[dataIndex].dollar = atoi(dollars);
+  node->data[dataIndex].cent = atoi(cents);
+
+  saveNode(node);
+
+  return 0;
+
+}
+
+
 
 int updateHistory(struct Data *item, int sale){ 
   
