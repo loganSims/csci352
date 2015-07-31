@@ -1,4 +1,6 @@
-#define ORDER 2
+#define ORDER 8
+
+#define PADDING ((ORDER - 2 ) * 2)
 
 struct Data
 {
@@ -9,12 +11,12 @@ struct Data
   char cate[12];
   int stock;
   int history[13];
-  //int offset; //location of data in inventory.txt
+  int padding;
 };
 
 struct Node
 {
-  char padding[16];
+  int padding[PADDING];
   int fileOffset;
   int count; //number of Data structs stored in node
   int leaf;

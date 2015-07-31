@@ -18,6 +18,7 @@
 #define DEBUG 1
 
 
+
 int getTransaction(char *line, char *action, char *code);
 int exeAction(char *action, char *code, char *line, int linepos);
 
@@ -128,9 +129,6 @@ int exeAction(char *action, char *code, char *line, int linepos){
             itemChange(action, code, line, linepos);
             break;
         case 2: 
-#if DEBUG
-            printf("adding item..\n");
-#endif     
             addItem(line);
             break;
         case 3:      
@@ -257,7 +255,6 @@ int addItem(char *line){
      item.cate[i] = item.cate[i] - 32;
    }
  }
-
 
  btree = getNode(0);
  insert(&item);

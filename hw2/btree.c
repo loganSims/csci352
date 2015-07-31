@@ -11,6 +11,7 @@ int initNode(struct Node *node){
   node->leaf = 0;
   node->fileOffset = -1;
   node->count = 0;
+
   for (i = 0; i <= (ORDER*2); i++){
     node->offsets[i] = -1;
   }

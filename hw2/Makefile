@@ -4,7 +4,9 @@ LDFLAGS = -g
 OBJECTS1 = btree.o initbtree.o 
 OBJECTS2 = btree.o readtree.o 
 OBJECTS3 = btree.o editbtree.o 
-EXES = initbtree readtree editbtree
+OBJECTS4 = btree.o size.o 
+
+EXES = initbtree readtree editbtree size
 
 all: $(EXES)
 
@@ -16,6 +18,9 @@ readtree:	$(OBJECTS2)
 
 editbtree:	$(OBJECTS3)
 	$(CC) -o $@ $(LDFLAGS) $(OBJECTS3)
+
+size:	$(OBJECTS4)
+	$(CC) -o $@ $(LDFLAGS) $(OBJECTS4)
 
 %.o:	%.c %.h
 	$(CC) -c $(CFLAGS) $< -o $@

@@ -11,6 +11,8 @@ int printData(struct Data data);
 
 int main (int argc, char** argv) {
 
+  printf("page size = %lu\n", sizeof(struct Node));
+
   struct Node *root = getNode(0);
 
   traverse(root);   
