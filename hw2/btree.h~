@@ -21,9 +21,6 @@ struct Node
   int offsets[(2 * ORDER) + 1];
   struct Data data[2 * ORDER];
 };
-
-struct Node *btree;
-
 int initBtree(struct Data *item);
 
 int initNode(struct Node *node);

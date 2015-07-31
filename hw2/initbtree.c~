@@ -26,8 +26,6 @@ int setHist(struct Data *item, char *line, int *pos);
 int saveItem(struct Data *item);
 
 int main (int argc, char** argv) {
-
-  int start = 1;
   
   if (argc < 2){
     printf("usage: ./initbtree [INVENTORY FILENAME]\n");
@@ -49,14 +47,11 @@ int main (int argc, char** argv) {
 
     while(fgets(line, BUF_SIZE, fd)){
 
-      buildData(item, line);
 
-      if (start){
-        initBtree(item);
-        start = 0;
-      }else{
-        insert(item);
-      }
+      buildData(item, line);
+      //add item to b-tree
+      insert(item);
+
 
       free(item);
       item = malloc(sizeof(struct Data));

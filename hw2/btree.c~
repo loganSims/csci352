@@ -6,6 +6,8 @@
 
 #define FILENAME "btreedata.txt"
 
+struct Node *btree;
+
 int initNode(struct Node *node){
   int i;
   node->leaf = 0;
