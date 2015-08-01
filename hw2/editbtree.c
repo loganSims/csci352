@@ -232,8 +232,6 @@ int changePrice(char *line, struct Node *node, int datapos, int linepos){
 
 }
 
-
-
 int updateHistory(struct Data *item, int sale){ 
   
   int i;
@@ -248,17 +246,18 @@ int updateHistory(struct Data *item, int sale){
 int addItem(char *line){
 
  int i;
- struct Data item;
- buildData(&item, &line[11]);
+ struct Data *item = malloc(sizeof(struct Node));
+ buildData(item, &line[11]);
  for(i = 0; i < 11; i++){
-   if ((item.cate[i] >= 97) && (item.cate[i] <= 122)){
-     item.cate[i] = item.cate[i] - 32;
+   if ((item->cate[i] >= 97) && (item->cate[i] <= 122)){
+     item->cate[i] = item->cate[i] - 32;
    }
  }
 
  btree = getNode(0);
- insert(&item);
+ insert(item);
  free(btree);
+ free(item);
 
  return 0;
 

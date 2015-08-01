@@ -1,4 +1,4 @@
-#define ORDER 8
+#define ORDER 2
 
 #define PADDING ((ORDER - 2 ) * 2)
 
@@ -33,6 +33,8 @@ int initNode(struct Node *node);
 int insert(struct Data *item);
 
 int search(struct Node *node, char *code, struct Node *found);
+
+int getSibOffset(struct Node *node, char* choice);
 
 int saveNode(struct Node *node);
 

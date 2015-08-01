@@ -277,13 +277,87 @@ int removekey(char *code, struct Node *node){
 
 
 
+/*
+ function: getParentOffset
+ input: 1. The candidate for childs parent, starts as root.
+        2. The code for the first data item in child.
+        3. The node whos parent is being searched for.
+ return: offset of parent node, -1 on failure.
+  
+ */
+int getParentOffset(struct Node *node, char* code, struct Node *child){
+
+  //node has no children, therefore child cannot be it's child
+  if (node->leaf){
+    return -1;
+  }
+ 
+  int i = 0;
+  while ((i < node->count) && (strcmp(code, node->data[i].code) > 0 )){
+    i++;
+  }
+
+  if (node->offsets[i] == child->fileOffset){
+    return node->fileOffset;
+  }else{
+    return getParentOffset(getNode(node->offsets[i]), code, child);  
+  }
+
+}
 
 
+/*
+ function: getSibOffset
+ input: 1. The node who's sibling we want.
+        2. Specifies which sibling.
+           "right" for right sibbling.
+            otherwise left sibling
+ return: offset of sibling node, -1 on failure.
+  
+ If there is no sibling to right the offset will be -1.
 
+ */
+int getSibOffset(struct Node *node, char *choice){
 
+  //Part (a) Setup.
 
+  int i = 0;
+  struct Node *parent;
+  
+  struct Node *root = getNode(0);
 
+  int parentOffset = getParentOffset(root, node->data[0].code, node);
 
+  free(root);
+
+  // Part (b) Locate nodes offset in parent.
+  if (parentOffset == -1){
+    return -1;
+  }
+
+  parent = getNode(parentOffset);
+
+  while ((i < parent->count) && 
+         (strcmp(node->data[0].code, parent->data[i].code) > 0 )){
+    i++;
+  }
+  
+  // Part (c) Return requested sibling.
+  // Also checks that node can have left/right sibling. 
+  if (strcmp(choice, "right") == 0){
+    if ((i+1) > parent->count){
+      return -1;
+    }else{
+      return parent->offsets[i+1];
+    }
+  }else{
+    if ((i-1) >= 0){
+      return parent->offsets[i-1];
+    }else{
+      return -1;
+    }
+  }
+}
 
 
 /* Beginning of inventory item set functions */
