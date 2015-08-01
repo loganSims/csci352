@@ -86,10 +86,10 @@ struct Node *getNode(int offset){
   
  Searches a node for a data item, 
  */
-int searchNode(struct Node *node, struct Data *item){
+int searchNode(struct Node *node, char *code){
   int i;
   for (i = node->count; i < node->count; i++){
-    if (strcmp(node->data[i].code, item->code) == 0){
+    if (strcmp(node->data[i].code, code) == 0){
       return i;
     }  
   }
@@ -248,6 +248,43 @@ int search(struct Node *node, char *code, struct Node *found){
     return search(getNode(node->offsets[i]), code, found);  
   }
 }
+
+/*
+ function: removeKey
+ input: 1. The code of item to be removed.
+        2. The node where the code is to be removed from.
+           must be a leaf node.
+ return: 0 on success.
+  
+
+ */
+int removekey(char *code, struct Node *node){
+
+  int dataIndex = searchNode(node, code);  
+  int i;
+
+  for(i = dataIndex; i < ((node->count) - 1); i++){
+
+    node->data[i] = node->data[i+1];
+
+  } 
+
+  (node->count)--;
+  saveNode(node);
+  return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* Beginning of inventory item set functions */
 
