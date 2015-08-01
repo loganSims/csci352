@@ -11,9 +11,10 @@ int printData(struct Data data);
 
 int main (int argc, char** argv) {
 
-  struct Node *root = getNode(0);
+  struct Node root; 
+  getNode(0, &root);
 
-  traverse(root);   
+  traverse(&root);   
 
   return 0;
 
@@ -22,23 +23,24 @@ int main (int argc, char** argv) {
 int traverse(struct Node *node){
 
   int i;
-
+  struct Node nextNode;
 
     for (i = 0; i < node->count; i++){
 
 
       if (!(node->leaf)){
-          traverse(getNode(node->offsets[i]));
+          getNode(node->offsets[i], &nextNode);
+          traverse(&nextNode);
       }
       printData(node->data[i]);
 
     }
 
     if (!(node->leaf)){
-        traverse(getNode(node->offsets[i]));
+      getNode(node->offsets[i], &nextNode);
+      traverse(&nextNode);
     }
 
-  free(node);
   return 0;
 }
 

@@ -64,16 +64,17 @@ int saveNode(struct Node *node){
 
  Searches btree data file for a node.
  */
-struct Node *getNode(int offset){
+int getNode(int offset, struct Node *node){
 
   FILE *fd = fopen(FILENAME, "r");
+
+  initNode(node);
   
   lseek(fileno(fd), offset, SEEK_CUR);
-  struct Node *node = malloc(sizeof(struct Node));
   fread(node, sizeof(struct Node), 1, fd);
   fclose(fd);
 
-  return node;
+  return 0;
 }
 
 /*
@@ -103,38 +104,40 @@ int searchNode(struct Node *node, char *code){
  */
 int splitChild(struct Node *x, int i, struct Node *splitNode){
 
-  struct Node *newNode = malloc(sizeof(struct Node));
-  newNode->leaf = splitNode->leaf;
-  newNode->count = ORDER;
-  newNode->fileOffset = -1;
+  struct Node newNode;
+  initNode(&newNode);
+  newNode.leaf = splitNode->leaf;
+  newNode.count = ORDER;
+  newNode.fileOffset = -1;
 
   int j;
 
   //give some of splitNode's data to newNode
   for(j = 0; j < ORDER; j++){
-    newNode->data[j] = splitNode->data[j+ORDER];
-    (splitNode->count)--;
+    newNode.data[j] = splitNode->data[j+ORDER];
   }
 
   //pass splitNode's children to newNode
   if (!(splitNode->leaf)){
     for(j = 0; j <= ORDER; j++){
-      newNode->offsets[j] = splitNode->offsets[j+ORDER];
+      newNode.offsets[j] = splitNode->offsets[j+ORDER];
       splitNode->offsets[j+ORDER] = -1;
     }  
   }
+
+  splitNode->count = ORDER;
 
   //shift x's offsets to right
   for (j = x->count; j > i; j--){
     x->offsets[j+1] = x->offsets[j];
   }
 
-  saveNode(newNode);
-  x->offsets[i+1] = newNode->fileOffset;
+  saveNode(&newNode);
+  x->offsets[i+1] = newNode.fileOffset;
 
   //shift x's data to the right
   for (j = x->count; j >= i; j--){
-    x->data[j+1] = x->data[j];
+    x->data[j] = x->data[j-1];
   }
 
   x->data[i] = splitNode->data[ORDER-1];
@@ -144,13 +147,16 @@ int splitChild(struct Node *x, int i, struct Node *splitNode){
   //save nodes
   saveNode(x);
   saveNode(splitNode);
-  saveNode(newNode);
+  saveNode(&newNode);
 
   return 0;
 }
 
 int insertNonfull(struct Node *node, struct Data *item){
+ 
   int i = 0; 
+  struct Node nextNode;
+ 
   i = node->count;
   if (node->leaf){
     while((i >= 1)&&(strcmp(item->code, node->data[i-1].code) < 0)){
@@ -158,39 +164,40 @@ int insertNonfull(struct Node *node, struct Data *item){
       i--;
     }
     node->data[i] = *item;
-    (node->count)++;
+    node->count = (node->count) + 1;
     saveNode(node);
   }else{ 
     while(( i>=1 )&&(strcmp(item->code, node->data[i-1].code) < 0)){
       i--;
-    }
-    
-    struct Node *nextNode = getNode(node->offsets[i]); 
+    } 
  
-    if (nextNode->count == (2*ORDER)){
-      splitChild(node, i, nextNode);
+    getNode(node->offsets[i], &nextNode); 
+ 
+    if (nextNode.count == (2*ORDER)){
+      splitChild(node, i, &nextNode);
       if (strcmp(item->code, node->data[i].code) > 0){
         i++;
       }
     }
 
-    insertNonfull(getNode(node->offsets[i]), item);
+    getNode(node->offsets[i], &nextNode);
 
-    free(nextNode);
+    insertNonfull(&nextNode, item);
   }
+
   return 0;
 }
 
 
 int initBtree(struct Data *item){
 
-  printf("setting up btree\n");
-  btree = malloc(sizeof(struct Node));
-  btree->data[0] = *item;
-  btree->count = 1;
-  btree->leaf = 1;
-  btree->fileOffset = -2;
-  saveNode(btree);
+  struct Node btree;
+  initNode(&btree);
+  btree.data[0] = *item;
+  btree.count = 1;
+  btree.leaf = 1;
+  btree.fileOffset = -2;
+  saveNode(&btree);
   return 0;
 
 }
@@ -198,27 +205,30 @@ int initBtree(struct Data *item){
 
 int insert(struct Data *item){
 
-  if (btree->count == (2*ORDER)){
+  struct Node root;  
+  struct Node newRoot;
+
+  getNode(0, &root);
+
+  if (root.count == (2*ORDER)){
     
-    struct Node *newRoot = malloc(sizeof(struct Node));
-    initNode(newRoot);
-    saveNode(newRoot);
+    initNode(&newRoot);
+    saveNode(&newRoot);
  
     //sawp old root and new root in file.
-    btree->fileOffset = newRoot->fileOffset;
-    newRoot->fileOffset = 0;
+    root.fileOffset = newRoot.fileOffset;
+    newRoot.fileOffset = 0;
     
-    newRoot->offsets[0] = btree->fileOffset; 
+    newRoot.offsets[0] = root.fileOffset; 
 
-    splitChild(newRoot, 0, btree);
+    splitChild(&newRoot, 0, &root);
     
-    insertNonfull(newRoot, item);
-    
-    btree = getNode(0);
-
+    insertNonfull(&newRoot, item);
+     
   }else{
-    insertNonfull(btree, item);
+    insertNonfull(&root, item);
   }
+
   return 0;
 }
 
@@ -245,7 +255,9 @@ int search(struct Node *node, char *code, struct Node *found){
   if (node->leaf){ 
     return -1;
   }else{
-    return search(getNode(node->offsets[i]), code, found);  
+    struct Node nextNode;
+    getNode(node->offsets[i], &nextNode);
+    return search(&nextNode, code, found);  
   }
 }
 
@@ -300,7 +312,9 @@ int getParentOffset(struct Node *node, char* code, struct Node *child){
   if (node->offsets[i] == child->fileOffset){
     return node->fileOffset;
   }else{
-    return getParentOffset(getNode(node->offsets[i]), code, child);  
+    struct Node nextNode;
+    getNode(node->offsets[i], &nextNode);
+    return getParentOffset(&nextNode, code, child);  
   }
 
 }
@@ -322,37 +336,38 @@ int getSibOffset(struct Node *node, char *choice){
   //Part (a) Setup.
 
   int i = 0;
-  struct Node *parent;
+  int parentOffset;
+  struct Node parent;
+  struct Node root;
   
-  struct Node *root = getNode(0);
 
-  int parentOffset = getParentOffset(root, node->data[0].code, node);
+  getNode(0, &root);
 
-  free(root);
+  parentOffset = getParentOffset(&root, node->data[0].code, node);
 
   // Part (b) Locate nodes offset in parent.
   if (parentOffset == -1){
     return -1;
   }
 
-  parent = getNode(parentOffset);
+  getNode(parentOffset, &parent);
 
-  while ((i < parent->count) && 
-         (strcmp(node->data[0].code, parent->data[i].code) > 0 )){
+  while ((i < parent.count) && 
+         (strcmp(node->data[0].code, parent.data[i].code) > 0 )){
     i++;
   }
   
   // Part (c) Return requested sibling.
   // Also checks that node can have left/right sibling. 
   if (strcmp(choice, "right") == 0){
-    if ((i+1) > parent->count){
+    if ((i+1) > parent.count){
       return -1;
     }else{
-      return parent->offsets[i+1];
+      return parent.offsets[i+1];
     }
   }else{
     if ((i-1) >= 0){
-      return parent->offsets[i-1];
+      return parent.offsets[i-1];
     }else{
       return -1;
     }

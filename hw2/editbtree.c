@@ -17,8 +17,6 @@
 #define BUF_SIZE 1024
 #define DEBUG 1
 
-
-
 int getTransaction(char *line, char *action, char *code);
 int exeAction(char *action, char *code, char *line, int linepos);
 
@@ -27,9 +25,7 @@ int updateHistory(struct Data *item, int sale);
 int changePrice(char *line, struct Node *node, int datapos, int linepos);
 int addItem(char *line);
 
-
 int main (int argc, char** argv) {
-
 
   if (argc < 2){
     printf("usage: ./editbtree [TRANSACTIONS FILE]\n");
@@ -153,11 +149,13 @@ int itemChange(char *action, char *code, char *line, int linepos){
   int newStock;
   int datapos;
   char amount[4];
-  struct Node *root = getNode(0);
-  struct Node *node = malloc(sizeof(struct Node));
+  struct Node root;
+  struct Node node;
+
+  getNode(0, &root);
 
   //Part (a) search for item in question
-  if ((datapos = search(root, code, node)) == -1){
+  if ((datapos = search(&root, code, &node)) == -1){
     printf("No item with code %s.\n", code);
     return 0;
   }else{
@@ -177,26 +175,24 @@ int itemChange(char *action, char *code, char *line, int linepos){
 
     //Part (b) perform transaction
     if (strcmp(action, "SALE") == 0){
-      newStock = (node->data[datapos].stock) - atoi(amount); 
+      newStock = (node.data[datapos].stock) - atoi(amount); 
       if (newStock < 0){
         printf("Quantity Sold of item %s is greater than current stock.\n", code);
       }else{
-        node->data[datapos].stock = newStock;
-        updateHistory(&(node->data[datapos]), atoi(amount));
+        node.data[datapos].stock = newStock;
+        updateHistory(&(node.data[datapos]), atoi(amount));
       }
     }else if (strcmp(action, "DELIVERY") == 0){
-      newStock = (node->data[datapos].stock) + atoi(amount); 
-      node->data[datapos].stock = newStock;
+      newStock = (node.data[datapos].stock) + atoi(amount); 
+      node.data[datapos].stock = newStock;
     }else{
-      changePrice(line, node, datapos, linepos);
+      changePrice(line, &node, datapos, linepos);
     }
 
-    saveNode(node);
+    saveNode(&node);
 
   }
 
-  free(root);
-  free(node);
   return 0;
 }
 
@@ -254,10 +250,7 @@ int addItem(char *line){
    }
  }
 
- btree = getNode(0);
  insert(item);
- free(btree);
- free(item);
 
  return 0;
 

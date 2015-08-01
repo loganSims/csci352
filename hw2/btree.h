@@ -24,8 +24,6 @@ struct Node
   struct Data data[2 * ORDER];
 };
 
-struct Node *btree;
-
 int initBtree(struct Data *item);
 
 int initNode(struct Node *node);
@@ -38,6 +36,6 @@ int getSibOffset(struct Node *node, char* choice);
 
 int saveNode(struct Node *node);
 
-struct Node *getNode(int offset);
+int getNode(int offset, struct Node *node);
 
 int buildData(struct Data *item, char *line);

@@ -45,21 +45,18 @@ int main (int argc, char** argv) {
     printf("File %s not found\n", filename);
   }else{
 
-    struct Data *item = malloc(sizeof(struct Data));
+    struct Data item;
 
     while(fgets(line, BUF_SIZE, fd)){
 
-      buildData(item, line);
+      buildData(&item, line);
 
       if (start){
-        initBtree(item);
+        initBtree(&item);
         start = 0;
       }else{
-        insert(item);
+        insert(&item);
       }
-
-      free(item);
-      item = malloc(sizeof(struct Data));
 
     }
 
