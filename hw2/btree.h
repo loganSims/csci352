@@ -34,6 +34,10 @@ int search(struct Node *node, char *code, struct Node *found);
 
 int getSibOffset(struct Node *node, char* choice);
 
+int getSibItem(struct Node *node, struct Data item, char *choice);
+
+int deleteKey(struct Node *node, char *code);
+
 int saveNode(struct Node *node);
 
 int getNode(int offset, struct Node *node);

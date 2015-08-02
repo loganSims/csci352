@@ -17,6 +17,10 @@
 #define BUF_SIZE 1024
 #define DEBUG 1
 
+#if DEBUG
+struct Node testNode;
+#endif
+
 int getTransaction(char *line, char *action, char *code);
 int exeAction(char *action, char *code, char *line, int linepos);
 
@@ -24,6 +28,7 @@ int itemChange(char *action, char *code, char *line, int linepos);
 int updateHistory(struct Data *item, int sale);
 int changePrice(char *line, struct Node *node, int datapos, int linepos);
 int addItem(char *line);
+int deleteItem(char *code);
 
 int main (int argc, char** argv) {
 
@@ -129,9 +134,9 @@ int exeAction(char *action, char *code, char *line, int linepos){
             break;
         case 3:      
 #if DEBUG
-            printf("deleting item..\n");
+            printf("deleting item %s\n", code);
 #endif
-
+            deleteItem(code);
             break;
         case 4:      
             itemChange(action, code, line, linepos);
@@ -253,7 +258,30 @@ int addItem(char *line){
  insert(item);
 
  return 0;
+}
 
+int deleteItem(char *code){
+
+  struct Node found;
+  struct Node root;
+  int index;
+
+  getNode(0, &root);
+
+  index = search(&root, code, &found);
+
+  if(index == -1){
+    printf("Item with code %s is not in database.\n", code);
+    return 0;
+  }
+
+  deleteKey(&found, code);
+
+  return 0;
 
 }
+
+
+
+
 

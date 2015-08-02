@@ -89,7 +89,7 @@ int getNode(int offset, struct Node *node){
  */
 int searchNode(struct Node *node, char *code){
   int i;
-  for (i = node->count; i < node->count; i++){
+  for (i = 0; i < node->count; i++){
     if (strcmp(node->data[i].code, code) == 0){
       return i;
     }  
@@ -265,7 +265,7 @@ int search(struct Node *node, char *code, struct Node *found){
  function: removeKey
  input: 1. The code of item to be removed.
         2. The node where the code is to be removed from.
-           must be a leaf node.
+           MUST BE A LEAF NODE.
  return: 0 on success.
   
 
@@ -285,9 +285,6 @@ int removekey(char *code, struct Node *node){
   saveNode(node);
   return 0;
 }
-
-
-
 
 /*
  function: getParentOffset
@@ -372,6 +369,207 @@ int getSibOffset(struct Node *node, char *choice){
       return -1;
     }
   }
+}
+
+
+int adjustUnderflow(struct Node *node){
+
+
+  char *left = "left";
+  char *right = "right";
+  int pickedleft;
+  int i = 0;
+  int k = 0;
+
+  int leftSibOffset;
+  int rightSibOffset;
+  int parentOffset;
+  int parentIndex = 0;
+  
+  int j = 0; //combindedNode index
+  struct Data combinedNode[2*(2*ORDER)]; //TODO make this better
+
+  struct Node leftsib;
+  struct Node rightsib;
+  struct Node parent;
+
+  struct Node merger;
+
+  struct Node root;
+
+  getNode(0, &root);
+
+  // Part (a) Find more populous sibling
+  leftSibOffset = getSibOffset(node, left);
+  rightSibOffset = getSibOffset(node, right);
+
+  if (leftSibOffset != -1){
+     getNode(leftSibOffset, &leftsib);
+  } 
+
+  if (rightSibOffset != -1){
+     getNode(rightSibOffset, &rightsib);
+  } 
+
+  //item has no siblings, can be delete with no adjustment
+  if ((rightSibOffset == -1) && (leftSibOffset == -1)){
+    return 0;
+  }else if (rightSibOffset == -1){
+    getNode(leftSibOffset, &merger);
+    pickedleft = 1;
+  }else if (leftSibOffset == -1){
+    getNode(rightSibOffset, &merger);
+    pickedleft = 0;
+  }else{
+    if(leftsib.count > rightsib.count){
+      getNode(leftSibOffset, &merger);
+      pickedleft = 1;
+    }else{
+      getNode(rightSibOffset, &merger);
+      pickedleft = 0;
+    }
+  }
+
+  // Part (b) Get item from parent for merge
+  parentOffset = getParentOffset(&root, node->data[0].code, node);
+  getNode(parentOffset, &parent);
+ 
+  while (strcmp(node->data[0].code, parent.data[i].code) > 0){
+    parentIndex++;
+  }
+
+  if (pickedleft){
+    parentIndex--;
+  }
+  
+  // Part (c) Build combinedNode.
+  
+  // build combinedNode.
+  for (i = 0; i < node->count; i++){
+    combinedNode[j] = node->data[i];
+    j++;
+  }
+
+  combinedNode[j] = parent.data[parentIndex];
+
+  for (i = 0; i < merger.count; i++){
+    combinedNode[j] = node->data[i];
+    j++;
+  }
+  
+  // Part (d) Add combinedNode to b-tree.
+ 
+  // node chosen to merger has more than ORDER values,
+  // need to dived combinedNode in half.
+  if (merger.count < ORDER){
+
+    // Assign values from combinedNode to nodes.
+    node->count = 0;
+    for (i = 0; i < (j/2); i++){
+      node->data[i] = combinedNode[i];
+      (node->count)++;
+    }
+
+    parent.data[parentIndex] = combinedNode[j/2];
+    i++;
+
+    while (i < j){
+      merger.data[k] = combinedNode[i];
+      k++;
+      i++;
+    }
+
+    saveNode(node);
+    saveNode(&parent);
+    saveNode(&merger);
+
+  // Node chosen to merge has ORDER values,
+  // combinedNode can function as a node.
+  }else{
+    if (pickedleft) {
+      for (i = 0; i < (ORDER*2); i++){
+        merger.data[i] = combinedNode[i];
+        saveNode(&merger);
+      }
+    }else{
+      for (i = 0; i < (ORDER*2); i++){
+        node->data[i] = combinedNode[i];
+        saveNode(node);
+      }
+    }
+    //shift offsets and data left
+    for (i = ((parent.count) - 1); i > parentIndex; i--){
+      parent.data[i-1] = parent.data[i];
+      parent.offsets[i] = parent.offsets[i+1];
+      parent.count--;
+    }
+
+    //if parent has less than ORDER items and isn't root.
+    if ((parent.count < ORDER) && (parent.fileOffset != 0)){
+      adjustUnderflow(&parent);
+    }
+
+    saveNode(&parent);
+
+  }
+  return 0;
+}
+
+
+int deleteKey(struct Node *node, char *code){
+
+  struct Node root;
+  struct Node maxnode;
+
+  struct Data k1;
+  struct Data k2;
+
+  getNode(0, &root);
+
+  // Part (a) Swap item for delete with greatest item in left subtree.
+  if (!(node->leaf)){
+    
+    int dataIndex =  searchNode(node, code);
+    getNode(node->offsets[dataIndex], &maxnode);
+   
+    k1 = node->data[dataIndex];
+
+    while(!(maxnode.leaf)){
+      getNode(maxnode.offsets[maxnode.count], &maxnode);     
+    }
+
+    k2 = maxnode.data[((maxnode.count) - 1)];
+
+    node->data[dataIndex] = k2;
+    maxnode.data[((maxnode.count) - 1)] = k1;
+
+    saveNode(node);
+    saveNode(&maxnode);
+
+    node = &maxnode;
+
+  }
+
+  // Part (b) Remove item, check for underflow
+  removekey(code, node);
+
+  if ((node->count < ORDER) && (node->fileOffset != 0)){
+    adjustUnderflow(node);    
+  }
+
+  if ((node->fileOffset == 0) && 
+      (node->count == 0) &&
+      (!(node->leaf))){
+
+    getNode(node->offsets[0], node);
+    node->fileOffset = 0;
+
+    saveNode(node);
+
+  }
+
+  return 0;
+
 }
 
 
