@@ -29,25 +29,34 @@ int traverse(struct Node *node){
     printf("fileOffset: %d\n", node->fileOffset);
     printf("Children: ");
 
-    for (k = 0; k < node->count; k++){
+    for (k = 0; k <= node->count; k++){
       printf("%d ", node->offsets[k]);
     }
     printf("\n");
 
     for (i = 0; i < node->count; i++){
 
-      printf("node at: %d    ", node->fileOffset);
-      printData(node->data[i]);
-
       if (!(node->leaf)){
+        if(((node->offsets[i] != -1) && node->offsets[i] != 0)){
+          printf("---");
           getNode(node->offsets[i], &nextNode);
           traverse(&nextNode);
+          printf("---\n");
+        }
       }
+
+      printf("Data in node: %d    ", node->fileOffset);
+      printData(node->data[i]);
+
     }
 
     if (!(node->leaf)){
-      getNode(node->offsets[i], &nextNode);
-      traverse(&nextNode);
+      if(((node->offsets[i] != -1) && node->offsets[i] != 0)){
+        printf("---");
+        getNode(node->offsets[i], &nextNode);
+        traverse(&nextNode);
+        printf("---\n");
+      }
     }
 
 

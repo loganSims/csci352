@@ -6,6 +6,9 @@
 
 #define FILENAME "btreedata.txt"
 
+
+int adjustUnderflow(struct Node *node);
+
 int initNode(struct Node *node){
   int i;
   node->leaf = 0;
@@ -107,25 +110,26 @@ int splitChild(struct Node *x, int i, struct Node *splitNode){
   struct Node newNode;
   initNode(&newNode);
   newNode.leaf = splitNode->leaf;
-  newNode.count = ORDER;
   newNode.fileOffset = -1;
+
+  int splitIndex = ORDER;
 
   int j;
 
   //give some of splitNode's data to newNode
-  for(j = 0; j < ORDER; j++){
-    newNode.data[j] = splitNode->data[j+ORDER];
+  for(j = 0; j < splitIndex; j++){
+    newNode.data[j] = splitNode->data[j+splitIndex];
+    (newNode.count)++;
+    (splitNode->count)--;
   }
 
   //pass splitNode's children to newNode
   if (!(splitNode->leaf)){
-    for(j = 0; j <= ORDER; j++){
-      newNode.offsets[j] = splitNode->offsets[j+ORDER];
-      splitNode->offsets[j+ORDER] = -1;
+    for(j = 0; j <= splitIndex; j++){
+      newNode.offsets[j] = splitNode->offsets[j+splitIndex];
+      splitNode->offsets[j+splitIndex] = -1;
     }  
   }
-
-  splitNode->count = ORDER;
 
   //shift x's offsets to right
   for (j = x->count; j > i; j--){
@@ -140,7 +144,7 @@ int splitChild(struct Node *x, int i, struct Node *splitNode){
     x->data[j] = x->data[j-1];
   }
 
-  x->data[i] = splitNode->data[ORDER-1];
+  x->data[i] = splitNode->data[splitIndex-1];
   (splitNode->count)--;
   (x->count)++;
 
@@ -148,7 +152,7 @@ int splitChild(struct Node *x, int i, struct Node *splitNode){
   saveNode(x);
   saveNode(splitNode);
   saveNode(&newNode);
-
+ 
   return 0;
 }
 
@@ -156,6 +160,7 @@ int insertNonfull(struct Node *node, struct Data *item){
  
   int i = 0; 
   struct Node nextNode;
+  struct Node onextNode;
  
   i = node->count;
   if (node->leaf){
@@ -165,6 +170,7 @@ int insertNonfull(struct Node *node, struct Data *item){
     }
     node->data[i] = *item;
     node->count = (node->count) + 1;
+
     saveNode(node);
   }else{ 
     while(( i>=1 )&&(strcmp(item->code, node->data[i-1].code) < 0)){
@@ -177,14 +183,38 @@ int insertNonfull(struct Node *node, struct Data *item){
       splitChild(node, i, &nextNode);
       if (strcmp(item->code, node->data[i].code) > 0){
         i++;
+        getNode(node->offsets[i], &onextNode);
+        insertNonfull(&onextNode, item);
+      }else{
+        insertNonfull(&nextNode, item);
       }
+  
+    }else{
+      getNode(node->offsets[i], &nextNode);
+      insertNonfull(&nextNode, item);
     }
-
-    getNode(node->offsets[i], &nextNode);
-
-    insertNonfull(&nextNode, item);
   }
 
+  return 0;
+}
+
+int rebalance(struct Node *node){
+
+  int i;
+  struct Node child;
+
+  for(i = 0; i < node->count; i++){
+    if(!(node->leaf)){
+      if ((node->offsets[i] != -1) && (node->offsets[i] != 0)){
+        getNode(node->offsets[i], &child);
+        rebalance(&child);
+      }
+    }else{
+      if (node->count < ORDER){
+        adjustUnderflow(node);
+      }
+    }
+  }
   return 0;
 }
 
@@ -221,14 +251,20 @@ int insert(struct Data *item){
     
     newRoot.offsets[0] = root.fileOffset; 
 
-    splitChild(&newRoot, 0, &root);
-    
+    splitChild(&newRoot, 0, &root); 
     insertNonfull(&newRoot, item);
+    if (root.count < ORDER){
+      adjustUnderflow(&root);
+    }
      
   }else{
     insertNonfull(&root, item);
   }
 
+  getNode(0, &root);
+
+  //rebalance(&root);
+  
   return 0;
 }
 
@@ -434,8 +470,10 @@ int adjustUnderflow(struct Node *node){
   parentOffset = getParentOffset(&root, node->data[0].code, node);
   getNode(parentOffset, &parent);
  
+  i = 0;
   while (strcmp(node->data[0].code, parent.data[i].code) > 0){
     parentIndex++;
+    i++;
   }
 
   if (pickedleft){
@@ -451,9 +489,10 @@ int adjustUnderflow(struct Node *node){
   }
 
   combinedNode[j] = parent.data[parentIndex];
+  j++;
 
   for (i = 0; i < merger.count; i++){
-    combinedNode[j] = node->data[i];
+    combinedNode[j] = merger.data[i];
     j++;
   }
   
@@ -461,7 +500,7 @@ int adjustUnderflow(struct Node *node){
  
   // node chosen to merger has more than ORDER values,
   // need to dived combinedNode in half.
-  if (merger.count < ORDER){
+  if (merger.count > ORDER){
 
     // Assign values from combinedNode to nodes.
     node->count = 0;
@@ -473,8 +512,10 @@ int adjustUnderflow(struct Node *node){
     parent.data[parentIndex] = combinedNode[j/2];
     i++;
 
+    merger.count = 0;
     while (i < j){
       merger.data[k] = combinedNode[i];
+      (merger.count)++;
       k++;
       i++;
     }
@@ -486,14 +527,18 @@ int adjustUnderflow(struct Node *node){
   // Node chosen to merge has ORDER values,
   // combinedNode can function as a node.
   }else{
+
     if (pickedleft) {
       for (i = 0; i < (ORDER*2); i++){
         merger.data[i] = combinedNode[i];
+        merger.count = (ORDER*2);
         saveNode(&merger);
+
       }
     }else{
       for (i = 0; i < (ORDER*2); i++){
         node->data[i] = combinedNode[i];
+        node->count = (ORDER*2);
         saveNode(node);
       }
     }
