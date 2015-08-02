@@ -1,6 +1,7 @@
 #define ORDER 2
-
 #define PADDING ((ORDER - 2 ) * 2)
+#define DEBUG 1
+
 
 struct Data
 {
@@ -24,6 +25,9 @@ struct Node
   struct Data data[2 * ORDER];
 };
 
+#if DEBUG
+struct Node testNode;
+#endif
 int initBtree(struct Data *item);
 
 int initNode(struct Node *node);

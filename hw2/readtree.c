@@ -4,7 +4,6 @@
 #include <stdlib.h>
 
 #define BUF_SIZE 1024
-#define DEBUG 0
 
 int traverse(struct Node *node);
 int printData(struct Data data);
@@ -22,24 +21,35 @@ int main (int argc, char** argv) {
 
 int traverse(struct Node *node){
 
+  int k;
   int i;
   struct Node nextNode;
 
+
+    printf("fileOffset: %d\n", node->fileOffset);
+    printf("Children: ");
+
+    for (k = 0; k < node->count; k++){
+      printf("%d ", node->offsets[k]);
+    }
+    printf("\n");
+
     for (i = 0; i < node->count; i++){
 
+      printf("node at: %d    ", node->fileOffset);
+      printData(node->data[i]);
 
       if (!(node->leaf)){
           getNode(node->offsets[i], &nextNode);
           traverse(&nextNode);
       }
-      printData(node->data[i]);
-
     }
 
     if (!(node->leaf)){
       getNode(node->offsets[i], &nextNode);
       traverse(&nextNode);
     }
+
 
   return 0;
 }

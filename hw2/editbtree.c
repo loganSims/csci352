@@ -15,11 +15,6 @@
 #include <string.h>
 
 #define BUF_SIZE 1024
-#define DEBUG 1
-
-#if DEBUG
-struct Node testNode;
-#endif
 
 int getTransaction(char *line, char *action, char *code);
 int exeAction(char *action, char *code, char *line, int linepos);

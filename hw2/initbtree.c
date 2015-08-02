@@ -14,7 +14,6 @@
 #include <stdlib.h>
 
 #define BUF_SIZE 1024
-#define DEBUG 0
 
 int setNumber(struct Data *item, char *line, int *pos);
 int setDesc(struct Data *item, char *line, int *pos);
