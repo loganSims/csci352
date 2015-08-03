@@ -52,8 +52,6 @@ int main (int argc, char** argv) {
 
       buildData(&item, line);
 
-      printf("adding item: %s\n", item.code);
-
       if (start){
         initBtree(&item);
         start = 0;

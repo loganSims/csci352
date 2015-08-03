@@ -248,8 +248,8 @@ int adjustOverflow(struct Node *node, struct Data *item){
   right.leaf = node->leaf;
 
   // Make overflowNode
-
-  printf("making overflow with node: %d\n", node->fileOffset);
+  
+  //printf("making overflow with node: %d\n", node->fileOffset);
 
   for (i= 0; i < (ORDER*2); i++){
 
@@ -272,11 +272,11 @@ int adjustOverflow(struct Node *node, struct Data *item){
     overflowNode[(ORDER*2)] = node->data[j];
   }
 
-  printf("overflowNode: \n");
+  /*printf("overflowNode: \n");
   for(i = 0; i < ((ORDER*2)+1); i++){
     printf("%s\n", overflowNode[i].code);
   }
-
+  */
   //divide up children of node to left and right if not leaf
   if (!(node->leaf)){
     for (j = 0; j <= ORDER; j++){
@@ -324,12 +324,12 @@ int adjustOverflow(struct Node *node, struct Data *item){
 
   // Shift parent offsets to make room from left and right
   for (j = parent.count; j > i; j--){
-    printf("%d!!!!!!!!!!!!!!!!!!!!!!\n", (j+1));
+    //printf("%d!!!!!!!!!!!!!!!!!!!!!!\n", (j+1));
     parent.offsets[j+1] = parent.offsets[j];
   }
 
-  fprintf(stderr, "index in parent for right: %d\n", (i+1));
-  fprintf(stderr, "index in parent for left: %d\n", (i));
+  //fprintf(stderr, "index in parent for right: %d\n", (i+1));
+  //fprintf(stderr, "index in parent for left: %d\n", (i));
   parent.offsets[i+1] = right.fileOffset;
   parent.offsets[i] = left.fileOffset;
 
