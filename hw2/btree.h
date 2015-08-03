@@ -17,12 +17,12 @@ struct Data
 
 struct Node
 {
-  int padding[PADDING];
+  //int padding[PADDING];
   int fileOffset;
   int count; //number of Data structs stored in node
   int leaf;
-  int offsets[(2 * ORDER) + 1];
-  struct Data data[2 * ORDER];
+  int offsets[(2 * ORDER) + 2];
+  struct Data data[(2 * ORDER)];
 };
 
 #if DEBUG
@@ -32,7 +32,9 @@ int initBtree(struct Data *item);
 
 int initNode(struct Node *node);
 
-int insert(struct Data *item);
+int insertSearch(struct Node *root, struct Data *item, struct Node *found);
+
+int insert(struct Node *node, struct Data *item);
 
 int search(struct Node *node, char *code, struct Node *found);
 

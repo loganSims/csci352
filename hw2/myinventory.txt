@@ -16,3 +16,8 @@ WL259132Shawl Collar Sheatland          54.50SWEATER  2  6  3  3  3  3  7  7  6 
 WL264610V-Neck Sheatland                39.50SWEATER  4  9  1  0  9  8  3  6  8  0 10  5  1
 WL245345Crewneck Sheatland              39.50SWEATER  4  6  8  2  7  6  4  3  3  8  3  0  4
 WL220626Unlined Double L Jeans          29.95PANTS 16  7 10  8  6  3  6  7  3  1  7  1  9
+WL100220Flannel-Lined Double L Jeans    49.95PANTS  5  5  3  4  5  8  3  2 10  4  2  6 10
+WL162343Fleece-Lined Double L Jeans     49.95PANTS  3  8  1  0  1  0  7  1  5  2 10  2  6
+WL245886Hurricane Cloth Shirt           59.95SHIRT 10  1  3 10  8  6  7  0  8  2  4  0  0
+WL242373Solid Double L Polo             24.95SHIRT  0  0  0  0  0  0  0  0  0  0  0  0  0
+WL240717Striped Double L Polo           27.95SHIRT  0  4  8  3  4  0  0  0  0  0  0  0  0

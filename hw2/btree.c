@@ -7,11 +7,12 @@
 #define FILENAME "btreedata.txt"
 
 
+int getParentOffset(struct Node *node, char* code, struct Node *child);
 int adjustUnderflow(struct Node *node);
 
 int initNode(struct Node *node){
   int i;
-  node->leaf = 0;
+  node->leaf = 1;
   node->fileOffset = -1;
   node->count = 0;
 
@@ -100,121 +101,26 @@ int searchNode(struct Node *node, char *code){
   return -1;
 }
 
-/*
 
-
-
- */
-int splitChild(struct Node *x, int i, struct Node *splitNode){
-
-  struct Node newNode;
-  initNode(&newNode);
-  newNode.leaf = splitNode->leaf;
-  newNode.fileOffset = -1;
-
-  int splitIndex = ORDER;
-
-  int j;
-
-  //give some of splitNode's data to newNode
-  for(j = 0; j < splitIndex; j++){
-    newNode.data[j] = splitNode->data[j+splitIndex];
-    (newNode.count)++;
-    (splitNode->count)--;
-  }
-
-  //pass splitNode's children to newNode
-  if (!(splitNode->leaf)){
-    for(j = 0; j <= splitIndex; j++){
-      newNode.offsets[j] = splitNode->offsets[j+splitIndex];
-      splitNode->offsets[j+splitIndex] = -1;
-    }  
-  }
-
-  //shift x's offsets to right
-  for (j = x->count; j > i; j--){
-    x->offsets[j+1] = x->offsets[j];
-  }
-
-  saveNode(&newNode);
-  x->offsets[i+1] = newNode.fileOffset;
-
-  //shift x's data to the right
-  for (j = x->count; j >= i; j--){
-    x->data[j] = x->data[j-1];
-  }
-
-  x->data[i] = splitNode->data[splitIndex-1];
-  (splitNode->count)--;
-  (x->count)++;
-
-  //save nodes
-  saveNode(x);
-  saveNode(splitNode);
-  saveNode(&newNode);
- 
-  return 0;
-}
-
-int insertNonfull(struct Node *node, struct Data *item){
+int insertSearch(struct Node *node, struct Data *item, struct Node *found){
  
   int i = 0; 
-  struct Node nextNode;
-  struct Node onextNode;
- 
-  i = node->count;
-  if (node->leaf){
-    while((i >= 1)&&(strcmp(item->code, node->data[i-1].code) < 0)){
-      node->data[i] = node->data[i-1];
-      i--;
-    }
-    node->data[i] = *item;
-    node->count = (node->count) + 1;
+  struct Node childNode;
 
-    saveNode(node);
+  if ((node->leaf) || (node->offsets[0] == -1)){
+    *found = *node;
+    return 0;
   }else{ 
-    while(( i>=1 )&&(strcmp(item->code, node->data[i-1].code) < 0)){
-      i--;
-    } 
- 
-    getNode(node->offsets[i], &nextNode); 
- 
-    if (nextNode.count == (2*ORDER)){
-      splitChild(node, i, &nextNode);
-      if (strcmp(item->code, node->data[i].code) > 0){
-        i++;
-        getNode(node->offsets[i], &onextNode);
-        insertNonfull(&onextNode, item);
-      }else{
-        insertNonfull(&nextNode, item);
-      }
-  
-    }else{
-      getNode(node->offsets[i], &nextNode);
-      insertNonfull(&nextNode, item);
+
+    while((i < node->count) && (strcmp(item->code, node->data[i].code) > 0)){
+      i++;
     }
+
+    getNode(node->offsets[i], &childNode);
+    insertSearch(&childNode, item, found);
+
   }
 
-  return 0;
-}
-
-int rebalance(struct Node *node){
-
-  int i;
-  struct Node child;
-
-  for(i = 0; i < node->count; i++){
-    if(!(node->leaf)){
-      if ((node->offsets[i] != -1) && (node->offsets[i] != 0)){
-        getNode(node->offsets[i], &child);
-        rebalance(&child);
-      }
-    }else{
-      if (node->count < ORDER){
-        adjustUnderflow(node);
-      }
-    }
-  }
   return 0;
 }
 
@@ -230,42 +136,6 @@ int initBtree(struct Data *item){
   saveNode(&btree);
   return 0;
 
-}
-
-
-int insert(struct Data *item){
-
-  struct Node root;  
-  struct Node newRoot;
-
-  getNode(0, &root);
-
-  if (root.count == (2*ORDER)){
-    
-    initNode(&newRoot);
-    saveNode(&newRoot);
- 
-    //sawp old root and new root in file.
-    root.fileOffset = newRoot.fileOffset;
-    newRoot.fileOffset = 0;
-    
-    newRoot.offsets[0] = root.fileOffset; 
-
-    splitChild(&newRoot, 0, &root); 
-    insertNonfull(&newRoot, item);
-    if (root.count < ORDER){
-      adjustUnderflow(&root);
-    }
-     
-  }else{
-    insertNonfull(&root, item);
-  }
-
-  getNode(0, &root);
-
-  //rebalance(&root);
-  
-  return 0;
 }
 
 /*
@@ -296,6 +166,198 @@ int search(struct Node *node, char *code, struct Node *found){
     return search(&nextNode, code, found);  
   }
 }
+
+int insertItem(struct Node *node, struct Data *item){
+
+  int i = node->count;
+
+  while((i >= 1)&&(strcmp(item->code, node->data[i-1].code) < 0)){
+    node->data[i] = node->data[i-1];
+    i--;
+  }
+  node->data[i] = *item;
+  node->count = (node->count) + 1;
+
+  saveNode(node);
+
+  return 0;
+}
+
+int rebalance(struct Node *node){
+
+  int i;
+  struct Node child;
+
+  for(i = 0; i < node->count; i++){
+    if(!(node->leaf)){
+      if ((node->offsets[i] != -1) && (node->offsets[i] != 0)){
+        getNode(node->offsets[i], &child);
+        rebalance(&child);
+      }
+    }else{
+      if (node->count < ORDER){
+        adjustUnderflow(node);
+      }
+    }
+  }
+  return 0;
+}
+
+int adjustOverflow(struct Node *node, struct Data *item){
+
+  int i = 0;
+  int j = 0;
+  int added = 0;
+
+  struct Node root;
+  struct Node left;
+  struct Node right;
+  struct Node parent;
+
+  struct Data parentItem;
+
+  int parentOffset;
+
+  struct Data overflowNode[(2*ORDER)+2];
+
+  getNode(0, &root);
+
+  parentOffset = getParentOffset(&root, node->data[0].code, node);
+  //root overflow, create new root and make parent of old root.
+  if (parentOffset == -1){
+    initNode(&parent);         
+    saveNode(&parent);
+
+    node->fileOffset = parent.fileOffset;
+    parent.fileOffset = 0;
+    parent.offsets[0] = node->fileOffset;
+    parent.count = 0;
+    parent.leaf = 0;
+   
+    saveNode(node); 
+    saveNode(&parent);
+
+  }else{
+    getNode(parentOffset, &parent);
+  }
+
+  initNode(&left);
+  initNode(&right);
+
+  left.leaf = node->leaf;
+  right.leaf = node->leaf;
+
+  // Make overflowNode
+
+  printf("making overflow with node: %d\n", node->fileOffset);
+
+  for (i= 0; i < (ORDER*2); i++){
+
+    if (strcmp(item->code, node->data[j].code) > 0){
+      overflowNode[i] = node->data[j];
+      j++;
+    }else if(!(added)){
+      overflowNode[i] = *item;
+      added = 1;
+    }else{ 
+      overflowNode[i] = node->data[j];
+      j++;
+    }
+
+  }
+
+  if (!(added)){
+    overflowNode[(ORDER*2)] = *item;
+  }else{
+    overflowNode[(ORDER*2)] = node->data[j];
+  }
+
+  printf("overflowNode: \n");
+  for(i = 0; i < ((ORDER*2)+1); i++){
+    printf("%s\n", overflowNode[i].code);
+  }
+
+  //divide up children of node to left and right if not leaf
+  if (!(node->leaf)){
+    for (j = 0; j <= ORDER; j++){
+      left.offsets[j] = node->offsets[j];
+    }
+    //for (j = 0; j < ORDER; j++){
+    // NOTE: this is for the case
+    // where a full parent was given a data item and had 
+    // to use its overflow offset.
+    j = 0;
+    while((node->offsets[j+ORDER+1] != -1) && ((j+ORDER) < (ORDER*2))){
+      right.offsets[j] = node->offsets[j+ORDER+1];
+      j++;
+    }
+  }
+
+  // Add data to left and right
+  // skipping middle value for parent
+  i = 0;
+  for(j = 0; j < ORDER; j++){
+    left.data[j] = overflowNode[i];   
+    left.count++;   
+    i++;
+  }
+  left.fileOffset = node->fileOffset;
+  saveNode(&left);
+  
+  parentItem = overflowNode[i];
+  i++;
+
+  for(j = 0; j < ORDER; j++){
+    right.data[j] = overflowNode[i];    
+    right.count++;  
+    i++;
+  }
+  saveNode(&right);
+
+  i = 0;
+  // Locate node offset index in parent. 
+  for(j = 0; j <= parent.count; j++){
+    if(parent.offsets[j] == node->fileOffset){
+      i = j;
+    }
+  }
+
+  // Shift parent offsets to make room from left and right
+  for (j = parent.count; j > i; j--){
+    printf("%d!!!!!!!!!!!!!!!!!!!!!!\n", (j+1));
+    parent.offsets[j+1] = parent.offsets[j];
+  }
+
+  fprintf(stderr, "index in parent for right: %d\n", (i+1));
+  fprintf(stderr, "index in parent for left: %d\n", (i));
+  parent.offsets[i+1] = right.fileOffset;
+  parent.offsets[i] = left.fileOffset;
+
+  saveNode(&parent);
+
+  insert(&parent, &parentItem);
+
+
+  return 0;
+}
+
+int insert(struct Node *insertNode, struct Data *item){
+
+  //struct Node root;
+
+  if(insertNode->count < (ORDER*2)){
+    insertItem(insertNode, item);
+  }else{
+    adjustOverflow(insertNode, item);
+  }
+
+  //getNode(0, &root);
+  //rebalance(&root);
+
+  return 0;
+}
+
+
 
 /*
  function: removeKey
@@ -331,6 +393,11 @@ int removekey(char *code, struct Node *node){
   
  */
 int getParentOffset(struct Node *node, char* code, struct Node *child){
+
+  // child is root
+  if (child->fileOffset == 0){
+    return -1;
+  }
 
   //node has no children, therefore child cannot be it's child
   if (node->leaf){

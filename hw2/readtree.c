@@ -37,7 +37,7 @@ int traverse(struct Node *node){
     for (i = 0; i < node->count; i++){
 
       if (!(node->leaf)){
-        if(((node->offsets[i] != -1) && node->offsets[i] != 0)){
+        if(node->offsets[i] != -1){
           printf("---");
           getNode(node->offsets[i], &nextNode);
           traverse(&nextNode);
@@ -51,7 +51,7 @@ int traverse(struct Node *node){
     }
 
     if (!(node->leaf)){
-      if(((node->offsets[i] != -1) && node->offsets[i] != 0)){
+      if(node->offsets[i] != -1){
         printf("---");
         getNode(node->offsets[i], &nextNode);
         traverse(&nextNode);

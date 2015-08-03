@@ -250,7 +250,12 @@ int addItem(char *line){
    }
  }
 
- insert(item);
+ struct Node root;
+ struct Node found;
+ getNode(0, &root);
+ insertSearch(&root, item, &found);
+
+ insert(&found, item);
 
  return 0;
 }

@@ -45,16 +45,22 @@ int main (int argc, char** argv) {
   }else{
 
     struct Data item;
+    struct Node node;
+    struct Node root;
 
     while(fgets(line, BUF_SIZE, fd)){
 
       buildData(&item, line);
 
+      printf("adding item: %s\n", item.code);
+
       if (start){
         initBtree(&item);
         start = 0;
       }else{
-        insert(&item);
+        getNode(0, &root);
+        insertSearch(&root, &item, &node);
+        insert(&node ,&item);
       }
 
     }
