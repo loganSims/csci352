@@ -19,10 +19,10 @@
 struct PriceChange
 {
   char code[9];
-  int stock;
+  int sold;
   int dollar;
   int cent;
-  int month;
+  int sales;
 };
 
 struct PriceChange *pricechanges;
@@ -317,21 +317,20 @@ int printItem(struct Node *node, int i){
   //item had no sale for the month
   if(node->data[i].sold != 1){
     updateHistory(&(node->data[i]), 0);
-    //printf("%s:%s Sales: $0.00\n", node->data[i].code, node->data[i].desc);
-  }//else{
+  }
 
-    //check from price changes
+  //check from price changes
 
 
-    //calculate sales profit
+  //calculate sales profit
 
-    sprintf(price, "%d.%d", node->data[i].dollar, node->data[i].cent);
+  sprintf(price, "%d.%d", node->data[i].dollar, node->data[i].cent);
  
-    float saleAmount = node->data[i].history[0] * strtof(price, NULL);
+  float saleAmount = node->data[i].history[0] * strtof(price, NULL);
 
-    printf("%s:%s Sales: $%.2f\n", node->data[i].code, node->data[i].desc, saleAmount);
+  printf("%s:%s Sales: $%.2f\n", node->data[i].code, node->data[i].desc, saleAmount);
 
- // }
+  node->data[i].sold = 0;
 
   return 0;
 }
@@ -361,6 +360,8 @@ int monthReport(struct Node *node){
       monthReport(&nextNode);
     }
   }
+
+  saveNode(node);
 
   return 0;
 }
