@@ -1,5 +1,5 @@
 #define ORDER 2
-#define PADDING ((ORDER - 2 ) * 2)
+#define PADDING ((ORDER-2) * 2)
 #define DEBUG 1
 
 
@@ -17,10 +17,10 @@ struct Data
 
 struct Node
 {
-  //int padding[PADDING];
+  int padding[PADDING];
   int fileOffset;
   int count; //number of Data structs stored in node
-  int leaf;
+  //int leaf;
   int offsets[(2 * ORDER) + 2];
   struct Data data[(2 * ORDER)];
 };

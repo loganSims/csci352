@@ -129,7 +129,7 @@ int exeAction(char *action, char *code, char *line, int linepos){
             break;
         case 3:      
 #if DEBUG
-            printf("deleting item %s\n", code);
+            printf("Deleting item %s\n.", code);
 #endif
             deleteItem(code);
             break;
@@ -156,10 +156,9 @@ int itemChange(char *action, char *code, char *line, int linepos){
 
   //Part (a) search for item in question
   if ((datapos = search(&root, code, &node)) == -1){
-    printf("No item with code %s.\n", code);
+    printf("No item with code %s. Cannot complete %s.\n", code, action);
     return 0;
   }else{
-
 
     if (strcmp(action, "PRICE") != 0){
       linepos++;
@@ -241,21 +240,32 @@ int updateHistory(struct Data *item, int sale){
 
 int addItem(char *line){
 
- int i;
- struct Data *item = malloc(sizeof(struct Node));
- buildData(item, &line[11]);
+ int i; 
+ struct Node root;
+ struct Node found;
+ struct Data item;
+
+ getNode(0, &root);
+
+ buildData(&item, &line[11]);
+ 
+ i = search(&root, item.code, &found);
+
+ if(i != -1){
+   printf("Cannot Add item, ");
+   printf("there is already an item with code: %s.\n", item.code);
+   return 0;
+ }
+
  for(i = 0; i < 11; i++){
-   if ((item->cate[i] >= 97) && (item->cate[i] <= 122)){
-     item->cate[i] = item->cate[i] - 32;
+   if ((item.cate[i] >= 97) && (item.cate[i] <= 122)){
+     item.cate[i] = item.cate[i] - 32;
    }
  }
 
- struct Node root;
- struct Node found;
- getNode(0, &root);
- insertSearch(&root, item, &found);
+ insertSearch(&root, &item, &found);
 
- insert(&found, item);
+ insert(&found, &item);
 
  return 0;
 }

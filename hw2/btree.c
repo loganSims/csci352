@@ -12,7 +12,7 @@ int adjustUnderflow(struct Node *node);
 
 int initNode(struct Node *node){
   int i;
-  node->leaf = 1;
+  //node->leaf = 1;
   node->fileOffset = -1;
   node->count = 0;
 
@@ -107,7 +107,7 @@ int insertSearch(struct Node *node, struct Data *item, struct Node *found){
   int i = 0; 
   struct Node childNode;
 
-  if ((node->leaf) || (node->offsets[0] == -1)){
+  if (node->offsets[0] == -1){
     *found = *node;
     return 0;
   }else{ 
@@ -131,7 +131,6 @@ int initBtree(struct Data *item){
   initNode(&btree);
   btree.data[0] = *item;
   btree.count = 1;
-  btree.leaf = 1;
   btree.fileOffset = -2;
   saveNode(&btree);
   return 0;
@@ -149,6 +148,7 @@ int initBtree(struct Data *item){
  */
 int search(struct Node *node, char *code, struct Node *found){
   int i = 0;
+
   while ((i < node->count) && (strcmp(code, node->data[i].code) > 0 )){
     i++;
   }
@@ -158,7 +158,7 @@ int search(struct Node *node, char *code, struct Node *found){
     return i;
   }
 
-  if (node->leaf){ 
+  if (node->offsets[i] == -1){ 
     return -1;
   }else{
     struct Node nextNode;
@@ -189,7 +189,7 @@ int rebalance(struct Node *node){
   struct Node child;
 
   for(i = 0; i < node->count; i++){
-    if(!(node->leaf)){
+    if(!(node->offsets[0] == -1)){
       if ((node->offsets[i] != -1) && (node->offsets[i] != 0)){
         getNode(node->offsets[i], &child);
         rebalance(&child);
@@ -232,7 +232,6 @@ int adjustOverflow(struct Node *node, struct Data *item){
     parent.fileOffset = 0;
     parent.offsets[0] = node->fileOffset;
     parent.count = 0;
-    parent.leaf = 0;
    
     saveNode(node); 
     saveNode(&parent);
@@ -244,12 +243,7 @@ int adjustOverflow(struct Node *node, struct Data *item){
   initNode(&left);
   initNode(&right);
 
-  left.leaf = node->leaf;
-  right.leaf = node->leaf;
-
   // Make overflowNode
-  
-  //printf("making overflow with node: %d\n", node->fileOffset);
 
   for (i= 0; i < (ORDER*2); i++){
 
@@ -271,23 +265,17 @@ int adjustOverflow(struct Node *node, struct Data *item){
   }else{
     overflowNode[(ORDER*2)] = node->data[j];
   }
-
-  /*printf("overflowNode: \n");
-  for(i = 0; i < ((ORDER*2)+1); i++){
-    printf("%s\n", overflowNode[i].code);
-  }
-  */
+  
   //divide up children of node to left and right if not leaf
-  if (!(node->leaf)){
+  if (node->offsets[0] != -1){
     for (j = 0; j <= ORDER; j++){
       left.offsets[j] = node->offsets[j];
     }
-    //for (j = 0; j < ORDER; j++){
     // NOTE: this is for the case
     // where a full parent was given a data item and had 
     // to use its overflow offset.
     j = 0;
-    while((node->offsets[j+ORDER+1] != -1) && ((j+ORDER) < (ORDER*2))){
+    while((j+ORDER) < ((ORDER*2)+1)){
       right.offsets[j] = node->offsets[j+ORDER+1];
       j++;
     }
@@ -324,7 +312,6 @@ int adjustOverflow(struct Node *node, struct Data *item){
 
   // Shift parent offsets to make room from left and right
   for (j = parent.count; j > i; j--){
-    //printf("%d!!!!!!!!!!!!!!!!!!!!!!\n", (j+1));
     parent.offsets[j+1] = parent.offsets[j];
   }
 
@@ -343,17 +330,11 @@ int adjustOverflow(struct Node *node, struct Data *item){
 
 int insert(struct Node *insertNode, struct Data *item){
 
-  //struct Node root;
-
   if(insertNode->count < (ORDER*2)){
     insertItem(insertNode, item);
   }else{
     adjustOverflow(insertNode, item);
   }
-
-  //getNode(0, &root);
-  //rebalance(&root);
-
   return 0;
 }
 
@@ -400,7 +381,7 @@ int getParentOffset(struct Node *node, char* code, struct Node *child){
   }
 
   //node has no children, therefore child cannot be it's child
-  if (node->leaf){
+  if (node->offsets[0] == -1){
     return -1;
   }
  
@@ -538,7 +519,8 @@ int adjustUnderflow(struct Node *node){
   getNode(parentOffset, &parent);
  
   i = 0;
-  while (strcmp(node->data[0].code, parent.data[i].code) > 0){
+  while ((strcmp(node->data[0].code, parent.data[i].code) > 0) && 
+        (i < parent.count)){
     parentIndex++;
     i++;
   }
@@ -550,19 +532,39 @@ int adjustUnderflow(struct Node *node){
   // Part (c) Build combinedNode.
   
   // build combinedNode.
-  for (i = 0; i < node->count; i++){
-    combinedNode[j] = node->data[i];
+  if(pickedleft){
+
+    for (i = 0; i < merger.count; i++){
+      combinedNode[j] = merger.data[i];
+      j++;
+    }
+
+    combinedNode[j] = parent.data[parentIndex];
     j++;
+
+    for (i = 0; i < node->count; i++){
+      combinedNode[j] = node->data[i];
+      j++;
+    }
+
+  }else{
+
+    for (i = 0; i < node->count; i++){
+      combinedNode[j] = node->data[i];
+      j++;
+    }
+
+    combinedNode[j] = parent.data[parentIndex];
+    j++;
+
+    for (i = 0; i < merger.count; i++){
+      combinedNode[j] = merger.data[i];
+      j++;
+    }
+
   }
 
-  combinedNode[j] = parent.data[parentIndex];
-  j++;
 
-  for (i = 0; i < merger.count; i++){
-    combinedNode[j] = merger.data[i];
-    j++;
-  }
-  
   // Part (d) Add combinedNode to b-tree.
  
   // node chosen to merger has more than ORDER values,
@@ -570,21 +572,44 @@ int adjustUnderflow(struct Node *node){
   if (merger.count > ORDER){
 
     // Assign values from combinedNode to nodes.
-    node->count = 0;
-    for (i = 0; i < (j/2); i++){
-      node->data[i] = combinedNode[i];
-      (node->count)++;
-    }
+    if(pickedleft){
 
-    parent.data[parentIndex] = combinedNode[j/2];
-    i++;
+      merger.count = 0;
+      for (i = 0; i < (j/2); i++){
+        merger.data[i] = combinedNode[i];
+        (merger.count)++;
+      }
 
-    merger.count = 0;
-    while (i < j){
-      merger.data[k] = combinedNode[i];
-      (merger.count)++;
-      k++;
+      parent.data[parentIndex] = combinedNode[j/2];
       i++;
+
+      node->count = 0;
+      while (i < j){
+        node->data[k] = combinedNode[i];
+        (node->count)++;
+        k++;
+        i++;
+      }
+
+    }else{
+
+      node->count = 0;
+      for (i = 0; i < (j/2); i++){
+        node->data[i] = combinedNode[i];
+        (node->count)++;
+      }
+
+      parent.data[parentIndex] = combinedNode[j/2];
+      i++;
+
+      merger.count = 0;
+      while (i < j){
+        merger.data[k] = combinedNode[i];
+        (merger.count)++;
+        k++;
+        i++;
+      }
+
     }
 
     saveNode(node);
@@ -596,32 +621,68 @@ int adjustUnderflow(struct Node *node){
   }else{
 
     if (pickedleft) {
+      // Give combined node data
       for (i = 0; i < (ORDER*2); i++){
         merger.data[i] = combinedNode[i];
-        merger.count = (ORDER*2);
-        saveNode(&merger);
-
       }
+      // Give all children
+      i = 0;
+      while(i <= merger.count){
+        i++;
+      }
+      j = 0;
+      while(j <= node->count){
+        merger.offsets[i] = node->offsets[j];
+        i++;
+        j++;
+      }
+      merger.count = (ORDER*2);
+      saveNode(&merger);
     }else{
+      // Give combined node data
       for (i = 0; i < (ORDER*2); i++){
         node->data[i] = combinedNode[i];
-        node->count = (ORDER*2);
-        saveNode(node);
       }
+      // Give all children
+      i = 0;
+      while(i <= node->count){
+        i++;
+      }
+      j = 0;
+      while(j <= merger.count){
+        node->offsets[i] = merger.offsets[j];
+        i++;
+        j++;
+      }
+
+      node->count = (ORDER*2);
+      saveNode(node);
     }
     //shift offsets and data left
     for (i = ((parent.count) - 1); i > parentIndex; i--){
       parent.data[i-1] = parent.data[i];
       parent.offsets[i] = parent.offsets[i+1];
-      parent.count--;
     }
+    
+    parent.count--;
 
     //if parent has less than ORDER items and isn't root.
     if ((parent.count < ORDER) && (parent.fileOffset != 0)){
+      saveNode(&parent);
       adjustUnderflow(&parent);
+      saveNode(&parent);
+    }else if((parent.fileOffset == 0) && (parent.count == 0)){
+      if (pickedleft) {
+        merger.fileOffset = 0;
+        saveNode(&merger);
+      }else{
+        node->fileOffset = 0;
+        saveNode(node);
+      }
+    }else{	
+      saveNode(&parent);
     }
 
-    saveNode(&parent);
 
   }
   return 0;
@@ -639,14 +700,14 @@ int deleteKey(struct Node *node, char *code){
   getNode(0, &root);
 
   // Part (a) Swap item for delete with greatest item in left subtree.
-  if (!(node->leaf)){
+  if (node->offsets[0] != -1){
     
     int dataIndex =  searchNode(node, code);
     getNode(node->offsets[dataIndex], &maxnode);
    
     k1 = node->data[dataIndex];
 
-    while(!(maxnode.leaf)){
+    while(maxnode.offsets[0] != -1){
       getNode(maxnode.offsets[maxnode.count], &maxnode);     
     }
 
@@ -671,7 +732,7 @@ int deleteKey(struct Node *node, char *code){
 
   if ((node->fileOffset == 0) && 
       (node->count == 0) &&
-      (!(node->leaf))){
+      (node->offsets[0] != -1)){
 
     getNode(node->offsets[0], node);
     node->fileOffset = 0;
