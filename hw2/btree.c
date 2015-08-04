@@ -11,6 +11,7 @@
 
   btree implementation algorithms from:
     webdocs.cs.ualberta.ca/~holte/T26/b-trees.html
+
  */
 #include "btree.h"
 #include <stdio.h>
@@ -48,10 +49,16 @@ int setStock(struct Data* item, char* line, int* pos);
 int setHist(struct Data* item, char* line, int* pos);
 int buildData(struct Data *item, char *line);
 
+/*
+  funtion: initnode 
+  Input: node: a new node
+  Return: 0 on complete (not used)
 
+  Sets values of Node struct to defualts
+
+ */
 int initNode(struct Node *node){
   int i;
-  //node->leaf = 1;
   node->fileOffset = -1;
   node->count = 0;
 
@@ -64,10 +71,13 @@ int initNode(struct Node *node){
 
 /*
  fucntion: saveNode
- input: 1. node to be saved to external file
- return: 1 on success (value isn't used)
+ input: 1. node: node to be saved to external file
+ return: 0 on success (value not used)
 
  Saves a node of the btree to external file.
+ Before the root is saved it is given a value of
+ -2. This is cause the btree file to be overwritten when
+ saving this node.
  */
 int saveNode(struct Node *node){
 
@@ -102,8 +112,9 @@ int saveNode(struct Node *node){
 
 /*
  fucntion: getNode
- input: 1. offset of node in file.
- return: Pointer to the node at offset.
+ input: 1. offset: offset of node in file.
+        2. node: Node stuct to be filled with found node.
+ return: 0 on complete.
 
  Searches btree data file for a node.
  */
@@ -141,6 +152,18 @@ int searchNode(struct Node *node, char *code){
 }
 
 
+/*
+  funtion: insertSearch
+  Input: 1. node: Current node being searched.
+         2. item: Item to be inserted.
+         3. found: Once node where item should be saved is found, that
+                   node is saved here.
+  Return: 0 on complete.
+
+  Locates the node in the btree where item should be inserted. Saves
+  that node into found.
+
+ */
 int insertSearch(struct Node *node, struct Data *item, struct Node *found){
  
   int i = 0; 
@@ -164,6 +187,14 @@ int insertSearch(struct Node *node, struct Data *item, struct Node *found){
 }
 
 
+/*
+  funtion: initBtree
+  Input: item: the first item to be inserted into the btree
+  Return: 0 on complete (value not used)
+
+  Saves the first node of a btree. Rewrites btree file
+  with this node.
+ */
 int initBtree(struct Data *item){
 
   struct Node btree;
@@ -178,10 +209,13 @@ int initBtree(struct Data *item){
 
 /*
  function: search
- input: 1. The item code being searched for in b-tree
- returns: index of data item in found node. 
+ Input: 1. node: Starts as root of tree, used for recursive search.
+        2. code: The item code being searched for in b-tree.
+        3. found: Node struct found node is saved into if found
 
- searches b-tree for item. sets found to the node with the 
+ Returns: index of data item in found node. 
+
+ Searches b-tree for item. sets found to the node with the 
  data item.
 
  */
@@ -206,6 +240,15 @@ int search(struct Node *node, char *code, struct Node *found){
   }
 }
 
+/*
+  funtion: insertItem
+  Input: 1. node: Non full node that item will be inserted to.
+         2. item: item to insert.
+  Return: 0 on complete. (value not used)
+
+  Inserts item into node. Node must be nonfull.
+
+ */
 int insertItem(struct Node *node, struct Data *item){
 
   int i = node->count;
@@ -222,26 +265,15 @@ int insertItem(struct Node *node, struct Data *item){
   return 0;
 }
 
-int rebalance(struct Node *node){
 
-  int i;
-  struct Node child;
+/*
+  funtion: adjustOverflow
+  Input: 1.
+         2.
+  Return: 0 on complete. (value not used)
 
-  for(i = 0; i < node->count; i++){
-    if(!(node->offsets[0] == -1)){
-      if ((node->offsets[i] != -1) && (node->offsets[i] != 0)){
-        getNode(node->offsets[i], &child);
-        rebalance(&child);
-      }
-    }else{
-      if (node->count < ORDER){
-        adjustUnderflow(node);
-      }
-    }
-  }
-  return 0;
-}
 
+ */
 int adjustOverflow(struct Node *node, struct Data *item){
 
   int i = 0;
@@ -367,6 +399,16 @@ int adjustOverflow(struct Node *node, struct Data *item){
   return 0;
 }
 
+/*
+  funtion: insert
+  Input: 1. insertNode: Node that item belongs in.
+         2. item: item to be inserted
+  Return: 0 on complete. (value not used)
+
+  Calles insertItem if insertNode is not full, otherwise
+  inserts item by calling asjustOverflow.
+
+ */
 int insert(struct Node *insertNode, struct Data *item){
 
   if(insertNode->count < (ORDER*2)){
@@ -383,10 +425,10 @@ int insert(struct Node *insertNode, struct Data *item){
  function: removeKey
  input: 1. The code of item to be removed.
         2. The node where the code is to be removed from.
-           MUST BE A LEAF NODE.
+           Node must be a leaf node.
  return: 0 on success.
   
-
+ Removes the item with code from node.
  */
 int removekey(char *code, struct Node *node){
 
@@ -445,15 +487,20 @@ int getParentOffset(struct Node *node, char* code, struct Node *child){
  input: 1. The node who's sibling we want.
         2. Specifies which sibling.
            "right" for right sibbling.
-            otherwise left sibling
+           otherwise left sibling
  return: offset of sibling node, -1 on failure.
   
  If there is no sibling to right the offset will be -1.
 
+ Part (a)
+ Part (b)
+ Part (c)
+ Part (d)
+ Part (e)
+
+
  */
 int getSibOffset(struct Node *node, char *choice){
-
-  //Part (a) Setup.
 
   int i = 0;
   int parentOffset;
@@ -494,7 +541,32 @@ int getSibOffset(struct Node *node, char *choice){
   }
 }
 
+/*
+  funtion: adjustUnderflow
+  Input: node: node that has underflow.
+  Return: 0 on complete. (value not used)
 
+  Part (a) The first step is to find more populous sibling
+           of the node with underflow. If the item has no
+           siblings then return. Otherwise set node merger to 
+           the chosen sibling, also setting pickedleft to 1 or 0
+           to use as boolean.
+  Part (b) Collect item form parent node to add to combined node.
+  Part (c) Build the combined node.
+  Part (d) Attempt to add combined node to tree. 
+  Part (e) If node is too large split in half amoung the 
+           left and right children of the original
+           parent node. Give the median value to the parent to replace value
+           parent gave to combined node.
+
+           If Part (e) was hit return
+
+  Part (f) If combiend node doesn't overflow make into node, and remove the 
+           node taken from parent from the parent.
+  Part (g) Check for parent underflow, if parent is root and underflow make
+           child new root.
+
+ */
 int adjustUnderflow(struct Node *node){
 
 
@@ -503,14 +575,14 @@ int adjustUnderflow(struct Node *node){
   int pickedleft;
   int i = 0;
   int k = 0;
-
+  int j = 0;
+  
   int leftSibOffset;
   int rightSibOffset;
   int parentOffset;
   int parentIndex = 0;
   
-  int j = 0; //combindedNode index
-  struct Data combinedNode[2*(2*ORDER)]; //TODO make this better
+  struct Data combinedNode[2*(2*ORDER)];
 
   struct Node leftsib;
   struct Node rightsib;
@@ -522,7 +594,7 @@ int adjustUnderflow(struct Node *node){
 
   getNode(0, &root);
 
-  // Part (a) Find more populous sibling
+  // Part (a)
   leftSibOffset = getSibOffset(node, left);
   rightSibOffset = getSibOffset(node, right);
 
@@ -534,7 +606,6 @@ int adjustUnderflow(struct Node *node){
      getNode(rightSibOffset, &rightsib);
   } 
 
-  //item has no siblings, can be delete with no adjustment
   if ((rightSibOffset == -1) && (leftSibOffset == -1)){
     return 0;
   }else if (rightSibOffset == -1){
@@ -553,7 +624,7 @@ int adjustUnderflow(struct Node *node){
     }
   }
 
-  // Part (b) Get item from parent for merge
+  // Part (b)
   parentOffset = getParentOffset(&root, node->data[0].code, node);
   getNode(parentOffset, &parent);
  
@@ -568,9 +639,7 @@ int adjustUnderflow(struct Node *node){
     parentIndex--;
   }
   
-  // Part (c) Build combinedNode.
-  
-  // build combinedNode.
+  // Part (c)
   if(pickedleft){
 
     for (i = 0; i < merger.count; i++){
@@ -604,24 +673,19 @@ int adjustUnderflow(struct Node *node){
   }
 
 
-  // Part (d) Add combinedNode to b-tree.
+  // Part (d)
  
-  // node chosen to merger has more than ORDER values,
-  // need to dived combinedNode in half.
+  // Part (e)
   if (merger.count > ORDER){
 
-    // Assign values from combinedNode to nodes.
     if(pickedleft){
-
       merger.count = 0;
       for (i = 0; i < (j/2); i++){
         merger.data[i] = combinedNode[i];
         (merger.count)++;
       }
-
       parent.data[parentIndex] = combinedNode[j/2];
       i++;
-
       node->count = 0;
       while (i < j){
         node->data[k] = combinedNode[i];
@@ -629,18 +693,14 @@ int adjustUnderflow(struct Node *node){
         k++;
         i++;
       }
-
     }else{
-
       node->count = 0;
       for (i = 0; i < (j/2); i++){
         node->data[i] = combinedNode[i];
         (node->count)++;
       }
-
       parent.data[parentIndex] = combinedNode[j/2];
       i++;
-
       merger.count = 0;
       while (i < j){
         merger.data[k] = combinedNode[i];
@@ -648,23 +708,19 @@ int adjustUnderflow(struct Node *node){
         k++;
         i++;
       }
-
     }
 
     saveNode(node);
     saveNode(&parent);
     saveNode(&merger);
 
-  // Node chosen to merge has ORDER values,
-  // combinedNode can function as a node.
+  // Part (f)
   }else{
 
     if (pickedleft) {
-      // Give combined node data
       for (i = 0; i < (ORDER*2); i++){
         merger.data[i] = combinedNode[i];
       }
-      // Give all children
       i = 0;
       while(i <= merger.count){
         i++;
@@ -678,11 +734,9 @@ int adjustUnderflow(struct Node *node){
       merger.count = (ORDER*2);
       saveNode(&merger);
     }else{
-      // Give combined node data
       for (i = 0; i < (ORDER*2); i++){
         node->data[i] = combinedNode[i];
       }
-      // Give all children
       i = 0;
       while(i <= node->count){
         i++;
@@ -697,7 +751,8 @@ int adjustUnderflow(struct Node *node){
       node->count = (ORDER*2);
       saveNode(node);
     }
-    //shift offsets and data left
+
+
     for (i = ((parent.count) - 1); i > parentIndex; i--){
       parent.data[i-1] = parent.data[i];
       parent.offsets[i] = parent.offsets[i+1];
@@ -705,7 +760,7 @@ int adjustUnderflow(struct Node *node){
     
     parent.count--;
 
-    //if parent has less than ORDER items and isn't root.
+    // Part (g)
     if ((parent.count < ORDER) && (parent.fileOffset != 0)){
       saveNode(&parent);
       adjustUnderflow(&parent);
@@ -721,13 +776,31 @@ int adjustUnderflow(struct Node *node){
     }else{	
       saveNode(&parent);
     }
-
-
   }
   return 0;
 }
 
 
+/*
+  funtion: deleteKey
+  Input: 1. node: The node that holds an item with code.
+         2. code: code of item to delete.
+  Return: 0 on complete. (value not used)
+
+  Performs the delete algorithm on node to remove 
+  item with code.
+
+  Part (a) If node is not a leaf, the node is swapped
+           with it's predecessor. (The right most node in 
+           the left subtree)
+
+  Part (b) Once swap is complete delete the node and
+           check for underflow.
+
+  Part (c) If the node was the root and is now empty after
+           delete. Make it's child the new root.
+
+ */
 int deleteKey(struct Node *node, char *code){
 
   struct Node root;
@@ -738,7 +811,7 @@ int deleteKey(struct Node *node, char *code){
 
   getNode(0, &root);
 
-  // Part (a) Swap item for delete with greatest item in left subtree.
+  // Part (a)
   if (node->offsets[0] != -1){
     
     int dataIndex =  searchNode(node, code);
@@ -762,13 +835,15 @@ int deleteKey(struct Node *node, char *code){
 
   }
 
-  // Part (b) Remove item, check for underflow
+  // Part (b)
   removekey(code, node);
 
   if ((node->count < ORDER) && (node->fileOffset != 0)){
     adjustUnderflow(node);    
   }
 
+
+  // Part (c)
   if ((node->fileOffset == 0) && 
       (node->count == 0) &&
       (node->offsets[0] != -1)){
@@ -785,9 +860,22 @@ int deleteKey(struct Node *node, char *code){
 }
 
 
-/* Beginning of inventory item set functions */
+/* ---------Beginning of inventory item set functions--------
+   The following functions are used to add
+   data to the Data struct.                 
+ */
 
 
+/*
+  funtion: setNumber
+  Input: 1. item: item being built
+         2. line: line from inventory.txt
+         3. pos: current position in line data is being read from.
+  Return: 0 on complete. (not used)
+
+  Gets the item code from line and saves it into item.
+
+ */
 int setNumber(struct Data* item, char* line, int* pos){
 
   
@@ -804,6 +892,16 @@ int setNumber(struct Data* item, char* line, int* pos){
   return 0;
 }
 
+/*
+  funtion: setDesc
+  Input: 1. item: item being built
+         2. line: line from inventory.txt
+         3. pos: current position in line data is being read from.
+  Return: 0 on complete. (not used)
+
+  Gets item desc and saves into item.
+
+ */
 int setDesc(struct Data* item, char* line, int *pos){
 
   int i = *pos;
@@ -820,6 +918,17 @@ int setDesc(struct Data* item, char* line, int *pos){
   return 0;
 };
 
+/*
+  funtion: setPrice
+  Input: 1. item: item being built
+         2. line: line from inventory.txt
+         3. pos: current position in line data is being read from.
+  Return: 0 on complete. (not used)
+
+  Gets dollar and cent field of item.
+  Converts ascii to int.
+
+ */
 int setPrice(struct Data* item, char* line, int* pos){
 
   int i = *pos;
@@ -847,6 +956,16 @@ int setPrice(struct Data* item, char* line, int* pos){
 };
 
 
+/*
+  funtion: setCategory
+  Input: 1. item: item being built
+         2. line: line from inventory.txt
+         3. pos: current position in line data is being read from.
+  Return: 0 on complete. (not used)
+
+  Gets the item category from line.
+
+ */
 int setCategory(struct Data* item, char* line, int* pos){
 
   int i = *pos;
@@ -874,6 +993,17 @@ int setCategory(struct Data* item, char* line, int* pos){
 };
 
 
+/*
+  funtion: setStock
+  Input: 1. item: item being built
+         2. line: line from inventory.txt
+         3. pos: current position in line data is being read from.
+  Return: 0 on complete. (not used)
+
+  Gets the stock field of item from line.
+  Converts ascii to int.
+
+ */
 int setStock(struct Data* item, char* line, int* pos){
   
   int i = *pos;
@@ -904,6 +1034,17 @@ int setStock(struct Data* item, char* line, int* pos){
 }
 
 
+/*
+  funtion: setHist
+  Input: 1. item: item being built
+         2. line: line from inventory.txt
+         3. pos: current position in line data is being read from.
+  Return: 0 on complete. (not used)
+
+  Sets the item history array with elements from line.
+  Converts ascii to int.
+
+ */
 int setHist(struct Data* item, char* line, int* pos){
   
   int i = *pos;
@@ -944,6 +1085,16 @@ int setHist(struct Data* item, char* line, int* pos){
 }
 
 
+/*
+  funtion: buildData
+  Input: 1: item: item to build, empty on call.
+         2: line: input line from inventory.txt
+  Return: 0 on complete. (not used)
+
+  Calls above functions to full build an data item.
+  Also sets profit field to 0.
+
+ */
 int buildData(struct Data *item, char *line){
 
   int p = 0;
