@@ -27,8 +27,6 @@ struct PriceChange
 
 struct PriceChange *pricechanges;
 
-int monthReport(struct Node *node);
-
 int getTransaction(char *line, char *action, char *code);
 int exeAction(char *action, char *code, char *line, int linepos);
 
@@ -44,8 +42,6 @@ int main (int argc, char** argv) {
     printf("usage: ./editbtree [TRANSACTIONS FILE]\n");
     return 0;
   }
-
-  struct Node root;
 
   char *filename = argv[1];
   char line[BUF_SIZE];
@@ -72,10 +68,6 @@ int main (int argc, char** argv) {
 
     }
   }
-
-  getNode(0, &root);
-
-  monthReport(&root);  
 
   fclose(fd);  
   return 0;
@@ -148,7 +140,7 @@ int exeAction(char *action, char *code, char *line, int linepos){
             break;
         case 3:      
 #if DEBUG
-            printf("Deleting item %s.\n", code);
+            printf("Deleting item %s\n.", code);
 #endif
             deleteItem(code);
             break;
@@ -199,7 +191,7 @@ int itemChange(char *action, char *code, char *line, int linepos){
       }else{
         node.data[datapos].stock = newStock;
         updateHistory(&(node.data[datapos]), atoi(amount));
-        node.data[datapos].padding = 1;
+        
 
 
       }
@@ -210,6 +202,7 @@ int itemChange(char *action, char *code, char *line, int linepos){
       changePrice(line, &node, datapos, linepos);
     }
 
+    node.data[datapos].padding = 1;
     saveNode(&node);
 
   }
@@ -312,57 +305,16 @@ int deleteItem(char *code){
   return 0;
 }
 
+int monthReport(struct PriceChange *pricechanges){
 
-int printItem(struct Node *node, int i){
-
-  char price[10];
-
-  //item had no sale for the month
-  if(node->data[i].padding != 1){
-    updateHistory(&(node->data[i]), 0);
-  }
-
-  //check from price changes
-
-
-  //calculate sales profit
-
-  sprintf(price, "%d.%d", node->data[i].dollar, node->data[i].cent);
  
-  float saleAmount = node->data[i].stock * strtof(price, NULL);
-
-  printf("Item %s, Sales: %.2f\n", node->data[i].code, saleAmount);
-
-  return 0;
-}
-
-int monthReport(struct Node *node){
   
-  int i;
-  struct Node nextNode;
 
 
-  for (i = 0; i < node->count; i++){
 
-    if (node->offsets[0] != -1){
-      if(node->offsets[i] != -1){
-        getNode(node->offsets[i], &nextNode);
-        monthReport(&nextNode);
-      }
-    }
-
-    printItem(node, i);
-
-  }
-
-  if (node->offsets[0] != -1){
-    if(node->offsets[i] != -1){
-      getNode(node->offsets[i], &nextNode);
-      monthReport(&nextNode);
-    }
-  }
 
   return 0;
 }
+
 
 
