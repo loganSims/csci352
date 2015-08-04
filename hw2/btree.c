@@ -265,13 +265,36 @@ int insertItem(struct Node *node, struct Data *item){
   return 0;
 }
 
-
 /*
   funtion: adjustOverflow
-  Input: 1.
-         2.
+  Input: 1. node: the node that would overflow
+         2. item: the item that would cause node to overflow
   Return: 0 on complete. (value not used)
 
+  The overflow node will be split into left and right. 
+  These nodes (left and right) will get half of the nodes values,
+  and the middle value will be pushed up to the parent. The parent
+  will be checked for overflow.
+ 
+  Part (a) Check if it is the root that has overflowed, if
+           so create new empty node as new root, and make it's
+           child the old root.
+  Part (b) build the overflow node in overflowNode.
+  Part (c) Divide up children of the node that would over flow
+           to left and right if node has children.
+  Part (d) Add data from overflowNode to left and right.
+           Skip middle of overflowNode, the middle goes to the
+           to parent.
+  Part (e) Make room in parent for left and right.
+           Call insert on parent node with the middle node, this
+           will repeat the whole insert process, thus checking
+           for parent overflow.
+ 
+  Important Node: struct Node has an extra offset feild, this is
+  used to store the overflow offset when a parent is overflown.
+  It will be fixed when insert is called on the parent that has
+  overflown and the extra offset will never be used in the tree
+  after the process is complete.
 
  */
 int adjustOverflow(struct Node *node, struct Data *item){
@@ -292,9 +315,9 @@ int adjustOverflow(struct Node *node, struct Data *item){
   struct Data overflowNode[(2*ORDER)+2];
 
   getNode(0, &root);
-
   parentOffset = getParentOffset(&root, node->data[0].code, node);
-  //root overflow, create new root and make parent of old root.
+
+  // Part (a)
   if (parentOffset == -1){
     initNode(&parent);         
     saveNode(&parent);
@@ -314,7 +337,7 @@ int adjustOverflow(struct Node *node, struct Data *item){
   initNode(&left);
   initNode(&right);
 
-  // Make overflowNode
+  // Part (b)
 
   for (i= 0; i < (ORDER*2); i++){
 
@@ -328,7 +351,6 @@ int adjustOverflow(struct Node *node, struct Data *item){
       overflowNode[i] = node->data[j];
       j++;
     }
-
   }
 
   if (!(added)){
@@ -336,13 +358,13 @@ int adjustOverflow(struct Node *node, struct Data *item){
   }else{
     overflowNode[(ORDER*2)] = node->data[j];
   }
-  
-  //divide up children of node to left and right if not leaf
+ 
+  // Part (c) 
   if (node->offsets[0] != -1){
     for (j = 0; j <= ORDER; j++){
       left.offsets[j] = node->offsets[j];
     }
-    // NOTE: this is for the case
+    // NOTE: this while loop is for the case
     // where a full parent was given a data item and had 
     // to use its overflow offset.
     j = 0;
@@ -352,8 +374,7 @@ int adjustOverflow(struct Node *node, struct Data *item){
     }
   }
 
-  // Add data to left and right
-  // skipping middle value for parent
+  // Part (d)
   i = 0;
   for(j = 0; j < ORDER; j++){
     left.data[j] = overflowNode[i];   
@@ -373,28 +394,24 @@ int adjustOverflow(struct Node *node, struct Data *item){
   }
   saveNode(&right);
 
+  // Part (e)
   i = 0;
-  // Locate node offset index in parent. 
   for(j = 0; j <= parent.count; j++){
     if(parent.offsets[j] == node->fileOffset){
       i = j;
     }
   }
 
-  // Shift parent offsets to make room from left and right
   for (j = parent.count; j > i; j--){
     parent.offsets[j+1] = parent.offsets[j];
   }
 
-  //fprintf(stderr, "index in parent for right: %d\n", (i+1));
-  //fprintf(stderr, "index in parent for left: %d\n", (i));
   parent.offsets[i+1] = right.fileOffset;
   parent.offsets[i] = left.fileOffset;
 
   saveNode(&parent);
 
   insert(&parent, &parentItem);
-
 
   return 0;
 }
@@ -492,13 +509,9 @@ int getParentOffset(struct Node *node, char* code, struct Node *child){
   
  If there is no sibling to right the offset will be -1.
 
- Part (a)
- Part (b)
- Part (c)
- Part (d)
- Part (e)
-
-
+ Part (a) Located the parent of node's offset.
+ Part (b) From the parent located the sibling of
+          node that was requested.
  */
 int getSibOffset(struct Node *node, char *choice){
 
@@ -510,9 +523,9 @@ int getSibOffset(struct Node *node, char *choice){
 
   getNode(0, &root);
 
+  // Part (a) 
   parentOffset = getParentOffset(&root, node->data[0].code, node);
 
-  // Part (b) Locate nodes offset in parent.
   if (parentOffset == -1){
     return -1;
   }
@@ -524,8 +537,7 @@ int getSibOffset(struct Node *node, char *choice){
     i++;
   }
   
-  // Part (c) Return requested sibling.
-  // Also checks that node can have left/right sibling. 
+  // Part (b) 
   if (strcmp(choice, "right") == 0){
     if ((i+1) > parent.count){
       return -1;
@@ -545,6 +557,9 @@ int getSibOffset(struct Node *node, char *choice){
   funtion: adjustUnderflow
   Input: node: node that has underflow.
   Return: 0 on complete. (value not used)
+
+  When a node underflows the node attempts to take 
+  data from a sibling.
 
   Part (a) The first step is to find more populous sibling
            of the node with underflow. If the item has no

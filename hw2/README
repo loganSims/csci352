@@ -1,0 +1,39 @@
++++++++++++++++++++++++++
++  Logan Sims   
++  CSCI 352     
++  Assignment 2 
++  08/05/2014   
++++++++++++++++++++++++++
+
+The following files are included:
+
+Makefile
+
+btree.c:
+  This file holds every function used for
+  btree manipulation. Including saving nodes, accessing nodes,
+  inserting, deleting, as well as functions for building the
+  Data struct. (the struct that holds information about inverntory
+  items)
+
+btree.h:
+  Structs for the btree are defined here as well as the order
+  of the btree.
+
+loadbtree.c:
+  This program takes an inventory file and
+  loads the btree using functions from btree.c
+  The btree will be saved in a file called btreedata.txt.
+
+updatebtree.c:
+  This program takes a transaction file and applies the
+  included transactions to the btree, saving the results
+  and displaying a sales report for the months worth
+  of transactions.
+
+readbtree.c:
+  This program prints out the btree. It displays information
+  about each node and the data it holds, as well as the children
+  of the node. The data is display as an in-order traversal. This
+  program was used for debugging and validating the btree structure.
+

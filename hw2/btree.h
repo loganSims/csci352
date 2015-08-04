@@ -1,5 +1,4 @@
 /*
-
   btree.h
 
   Logan Sims
@@ -8,11 +7,8 @@
   08/05/2015
 
   Header file used by loadbtree, updatebtree, and readbtree
-
   NOTE: Tree order is defined here.
-
  */
-
 #define ORDER 2
 #define PADDING ((ORDER-2) * 2)
 #define DEBUG 0
