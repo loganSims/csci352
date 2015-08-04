@@ -5,7 +5,7 @@
    Logan Sims
    CSCI 352
    Assignment 2
-   7/24/2015
+   08/05/2015
 
    Reads transactions.txt and edits b-tree file.
 

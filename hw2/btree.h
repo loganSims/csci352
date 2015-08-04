@@ -1,7 +1,21 @@
+/*
+
+  btree.h
+
+  Logan Sims
+  CSCI 352
+  Assignment 2
+  08/05/2015
+
+  Header file used by loadbtree, updatebtree, and readbtree
+
+  NOTE: Tree order is defined here.
+
+ */
+
 #define ORDER 2
 #define PADDING ((ORDER-2) * 2)
-#define DEBUG 1
-
+#define DEBUG 0
 
 struct Data
 {
@@ -27,6 +41,7 @@ struct Node
 #if DEBUG
 struct Node testNode;
 #endif
+
 int initBtree(struct Data *item);
 
 int initNode(struct Node *node);

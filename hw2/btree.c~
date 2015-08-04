@@ -11,7 +11,10 @@
 
   btree implementation algorithms from:
     webdocs.cs.ualberta.ca/~holte/T26/b-trees.html
+
+
  */
+
 #include "btree.h"
 #include <stdio.h>
 #include <string.h>
@@ -20,34 +23,11 @@
 
 #define FILENAME "btreedata.txt"
 
-int initNode(struct Node *node);
-int saveNode(struct Node *node);
-int getNode(int offset, struct Node *node);
-int searchNode(struct Node *node, char *code);
-
-// Insert functions
-int insertSearch(struct Node *node, struct Data *item, struct Node *found);
-int adjustOverflow(struct Node *node, struct Data *item);
-int insert(struct Node *insertNode, struct Data *item);
-
-// Delete functions
-int removekey(char *code, struct Node *node);
-int adjustUnderflow(struct Node *node);
-int deleteKey(struct Node *node, char *code);
-
-// Used by underflow/overflow adjust functions.
-int getParentOffset(struct Node *node, char* code, struct Node *child);
-int getSibOffset(struct Node *node, char *choice);
-
-// Building item functions.
-int setNumber(struct Data* item, char* line, int* pos);
-int setDesc(struct Data* item, char* line, int *pos);
-int setPrice(struct Data* item, char* line, int* pos);
-int setCategory(struct Data* item, char* line, int* pos);
-int setStock(struct Data* item, char* line, int* pos);
-int setHist(struct Data* item, char* line, int* pos);
-int buildData(struct Data *item, char *line);
-
+int initNode(struct Node *node){
+int saveNode(struct Node *node){
+int getNode(int offset, struct Node *node){
+int searchNode(struct Node *node, char *code){
+int insertSearch(struct Node *node, struct Data *item, struct Node *found){
 
 int initNode(struct Node *node){
   int i;
