@@ -916,6 +916,6 @@ int buildData(struct Data *item, char *line){
   setCategory(item, line, pos);      
   setStock(item, line, pos);    
   setHist(item, line, pos);
-  item->padding = 0;
+  item->sold = 0;
   return 0;
 }

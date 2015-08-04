@@ -12,7 +12,7 @@ struct Data
   char cate[12];
   int stock;
   int history[13];
-  int padding;
+  int sold;
 };
 
 struct Node

@@ -69,14 +69,14 @@ int main (int argc, char** argv) {
       //perform transaction
       exeAction(action, code, line, i);
 
-
     }
   }
 
   getNode(0, &root);
 
+  printf("----------------MONTH SALES REPORT----------------\n");
   monthReport(&root);  
-
+  printf("--------------------------------------------------\n");
   fclose(fd);  
   return 0;
 }
@@ -147,9 +147,6 @@ int exeAction(char *action, char *code, char *line, int linepos){
             addItem(line);
             break;
         case 3:      
-#if DEBUG
-            printf("Deleting item %s.\n", code);
-#endif
             deleteItem(code);
             break;
         case 4:      
@@ -175,7 +172,7 @@ int itemChange(char *action, char *code, char *line, int linepos){
 
   //Part (a) search for item in question
   if ((datapos = search(&root, code, &node)) == -1){
-    printf("No item with code %s. Cannot complete %s.\n", code, action);
+    printf("ERROR: No item with code %s. Cannot complete %s.\n", code, action);
     return 0;
   }else{
 
@@ -195,11 +192,11 @@ int itemChange(char *action, char *code, char *line, int linepos){
     if (strcmp(action, "SALE") == 0){
       newStock = (node.data[datapos].stock) - atoi(amount); 
       if (newStock < 0){
-        printf("Quantity Sold of item %s is greater than current stock.\n", code);
+        printf("ERROR: Quantity Sold of item %s is greater than current stock.\n", code);
       }else{
         node.data[datapos].stock = newStock;
         updateHistory(&(node.data[datapos]), atoi(amount));
-        node.data[datapos].padding = 1;
+        node.data[datapos].sold = 1;
 
 
       }
@@ -274,7 +271,7 @@ int addItem(char *line){
  i = search(&root, item.code, &found);
 
  if(i != -1){
-   printf("Cannot Add item, ");
+   printf("ERROR: Cannot Add item, ");
    printf("there is already an item with code: %s.\n", item.code);
    return 0;
  }
@@ -303,7 +300,7 @@ int deleteItem(char *code){
   index = search(&root, code, &found);
 
   if(index == -1){
-    printf("Item with code %s is not in database.\n", code);
+    printf("ERROR: Item with code %s is not in database.\n", code);
     return 0;
   }
 
@@ -318,20 +315,23 @@ int printItem(struct Node *node, int i){
   char price[10];
 
   //item had no sale for the month
-  if(node->data[i].padding != 1){
+  if(node->data[i].sold != 1){
     updateHistory(&(node->data[i]), 0);
-  }
+    //printf("%s:%s Sales: $0.00\n", node->data[i].code, node->data[i].desc);
+  }//else{
 
-  //check from price changes
+    //check from price changes
 
 
-  //calculate sales profit
+    //calculate sales profit
 
-  sprintf(price, "%d.%d", node->data[i].dollar, node->data[i].cent);
+    sprintf(price, "%d.%d", node->data[i].dollar, node->data[i].cent);
  
-  float saleAmount = node->data[i].stock * strtof(price, NULL);
+    float saleAmount = node->data[i].history[0] * strtof(price, NULL);
 
-  printf("Item %s, Sales: %.2f\n", node->data[i].code, saleAmount);
+    printf("%s:%s Sales: $%.2f\n", node->data[i].code, node->data[i].desc, saleAmount);
+
+ // }
 
   return 0;
 }
