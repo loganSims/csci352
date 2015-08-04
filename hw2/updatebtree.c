@@ -36,6 +36,15 @@ int deleteItem(char *code);
 int monthReport(struct Node *node);
 int printItem(struct Node *node, int i);
 
+/*
+  function: main
+
+  Reads from transaction file line by line, processing each
+  transaction. 
+
+  At the end calls monthReport to display report.
+  Uses getNode() from btree.c
+ */
 
 int main (int argc, char** argv) {
 
@@ -116,6 +125,20 @@ int getTransaction(char *line, char *action, char *code){
 
 }
 
+
+/*
+  function: exeAction
+  Input: 1. action: Name of the transaction being performed.
+         2. code: Code of item involed in transaction
+         3. line: Original line form transaction file
+         4. linepos: The position in line of the data for transaction.
+                     (The point in the line after transaction name and item code)
+
+  Return: 0 on complete (value not used)
+
+  Based on action uses switch statement to call correct function
+  to perform action. 
+ */
 int exeAction(char *action, char *code, char *line, int linepos){
 
     int j;
@@ -158,6 +181,28 @@ int exeAction(char *action, char *code, char *line, int linepos){
 
 }
 
+/*
+  function: itemChange
+  Input: 1. action: action to be perfomed.
+         2. code: item changed by action. 
+         3. line: original line from transaction file.
+         4. linepos: position in line after transaction type and item code.
+
+  Return: 0 on complete. (value not used)
+
+  Handles sales, delivery, and price changes for items.
+  Part (a): Search for the item in question.
+  Part (b): If the action is not a price change pull out amount of
+            sale or delivery for use.
+  Part (c): Perform correct transaction based on action input.
+            - Sale: Item's stock is updated and the profit field
+                    of the item is calculated based on current price.
+            - Delivery: Item's stock is updated.
+            - Price change: function changePrice is called to handle change.
+
+  Uses saveNode(), and getNode() from btree.c
+
+ */
 int itemChange(char *action, char *code, char *line, int linepos){
 
   int j = 0;
@@ -169,48 +214,63 @@ int itemChange(char *action, char *code, char *line, int linepos){
 
   getNode(0, &root);
 
-  //Part (a) search for item in question
+  //Part (a)
   if ((datapos = search(&root, code, &node)) == -1){
     printf("ERROR: No item with code %s. Cannot complete %s.\n", code, action);
     return 0;
-  }else{
-
-    if (strcmp(action, "PRICE") != 0){
-      linepos++;
-
-      while(line[linepos] != '\0'){
-        amount[j] = line[linepos];
-        j++;
-        linepos++;
-      }
-      line[linepos] = '\0';
-    }
-
-
-    //Part (b) perform transaction
-    if (strcmp(action, "SALE") == 0){
-      newStock = (node.data[datapos].stock) - atoi(amount); 
-      if (newStock < 0){
-        printf("ERROR: Quantity Sold of item %s is greater than current stock.\n", code);
-      }else{
-        node.data[datapos].stock = newStock;
-        updateHistory(&(node.data[datapos]), atoi(amount));
-        updateSales(&(node.data[datapos]), atoi(amount));
-      }
-    }else if (strcmp(action, "DELIVERY") == 0){
-      newStock = (node.data[datapos].stock) + atoi(amount); 
-      node.data[datapos].stock = newStock;
-    }else{
-      changePrice(line, &node, datapos, linepos);
-    }
-
-    saveNode(&node);
-
   }
+
+  // Part (b)
+  if (strcmp(action, "PRICE") != 0){
+    linepos++;
+
+    while(line[linepos] != '\0'){
+      amount[j] = line[linepos];
+      j++;
+      linepos++;
+    }
+    line[linepos] = '\0';
+  }
+
+  //Part (c)
+  if (strcmp(action, "SALE") == 0){
+    newStock = (node.data[datapos].stock) - atoi(amount); 
+    if (newStock < 0){
+      printf("ERROR: Quantity Sold of item %s is greater than current stock.\n", code);
+    }else{
+      node.data[datapos].stock = newStock;
+      updateHistory(&(node.data[datapos]), atoi(amount));
+      updateSales(&(node.data[datapos]), atoi(amount));
+    }
+
+  }else if (strcmp(action, "DELIVERY") == 0){
+    newStock = (node.data[datapos].stock) + atoi(amount); 
+    node.data[datapos].stock = newStock;
+  }else{
+    changePrice(line, &node, datapos, linepos);
+  }
+
+  saveNode(&node);
 
   return 0;
 }
 
+/* 
+  function changePrice
+  input: 1. line: original line from transaction file.
+         2. node: node in btree that holds item.
+         3. datapos: position of the item being changed in node
+         4. linepos: current position in line. 
+                     (will be after action name and item code)
+  Return: 0 on compelete. (value not used)
+
+  Builds gets new price and updates the information in the Data struct.
+  first while loop gathers dollar amount, second gets cent amount.
+  Saves node once done.
+
+  Uses saveNode() from btree.c
+
+ */
 int changePrice(char *line, struct Node *node, int datapos, int linepos){
 
   int i = 0;
@@ -226,6 +286,7 @@ int changePrice(char *line, struct Node *node, int datapos, int linepos){
   }
 
   i = 0;
+  // skip passed '.'
   linepos++;
 
   while((line[linepos] != '\n') && (line[linepos] != EOF)){
@@ -237,12 +298,22 @@ int changePrice(char *line, struct Node *node, int datapos, int linepos){
   node->data[datapos].dollar = atoi(dollars);
   node->data[datapos].cent = atoi(cents);
 
-
   saveNode(node);
   return 0;
-
 }
 
+
+/*
+  function: updateSales
+  Input: 1. item: item being updated.
+         2. quanitiy of sale.
+
+  Return: 0 on complete. (value not used)
+
+  Updates the profit field of a item after sale.
+  Performs string to double conversion.
+
+ */
 int updateSales(struct Data *item, int sold){
 
   char price[12];  
@@ -257,17 +328,51 @@ int updateSales(struct Data *item, int sold){
 
 }
 
+/*
+  function: updateHistory
+  Input: 1. item: item to be updated.
+         2. sale: amount sold.
+  Return: 0 on complete. (value not used)
+
+  Updates the item histroy after sale.
+  If item profit is 0 then assumes new months worth
+  of data and makes new month entry. Once profits are
+  being made assumes same month and updates that months
+  history.
+
+ */
+
 int updateHistory(struct Data *item, int sale){ 
   
   int i;
-  for (i = 10; i >= 0; i--){
-    item->history[i+1] = item->history[i];
+
+  if(item->profit == 0){
+    for (i = 10; i >= 0; i--){
+      item->history[i+1] = item->history[i];
+    }
+    item->history[0] = sale;
+  }else{
+    item->history[0] += sale;
   }
-  item->history[0] = sale;
   return 0;
 }
 
 
+/*
+  function: addItem
+  Input: line: line from transaction file.
+  Return: 0 on complete. (value not used)
+ 
+  Adds an item to the btree if there is not 
+  already an item with same code in tree.
+  
+  Uses buildData() from btree.c to make item, 
+  line[11] is used to skip past transation name 
+  in line and get to the new item data.
+
+  Also Uses search(), insertSearch(), and insert() from btree.c
+
+ */
 int addItem(char *line){
 
  int i; 
@@ -282,7 +387,7 @@ int addItem(char *line){
  i = search(&root, item.code, &found);
 
  if(i != -1){
-   printf("ERROR: Cannot Add item, ");
+   printf("ERROR: Cannot add item, ");
    printf("there is already an item with code: %s.\n", item.code);
    return 0;
  }
@@ -299,6 +404,18 @@ int addItem(char *line){
 
  return 0;
 }
+
+/*
+  function: deleteItem
+  Input: code: the item code to be deleted. 
+  Return: 0 on complete (value not used)
+
+  Deletes item from btree. First checks if 
+  item is in tree.
+
+  Uses deleteKey from btree.c
+
+ */
 
 int deleteItem(char *code){
 
@@ -320,13 +437,24 @@ int deleteItem(char *code){
   return 0;
 }
 
+/*
+  function: monthReport
+  Input: node: Starts as root for tree, node of current focus in
+               recursive calls.
+  Return: 0 on complete (value not used)
+ 
+  Performs in order traversal to print out sales
+  report for every item. calls printItem to print
+  data in each item
 
+  Uses getNode() and saveNode() from btree.c
+
+ */
 
 int monthReport(struct Node *node){
   
   int i;
   struct Node nextNode;
-
 
   for (i = 0; i < node->count; i++){
 
@@ -354,10 +482,22 @@ int monthReport(struct Node *node){
 }
 
 
+/*
+  function: printItem
+  Input: 1. node: the node the data item is in.
+         2. i: the index in node that data item is in.
+  Returns: 0 on complete. (value not used)
+
+  Prints item code, desc, and profit fields for report.
+  Updates history of items that did not sell in 
+  current month. Sets profit back to 0 so data
+  is ready for next months transactions.
+
+ */
 int printItem(struct Node *node, int i){
 
   //item had no sale for the month
-  if(node->data[i].profit == 1){
+  if(node->data[i].profit == 0){
     updateHistory(&(node->data[i]), 0);
   }
 
