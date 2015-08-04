@@ -1,10 +1,13 @@
 /*
+
+   updatebtree.c
+
    Logan Sims
    CSCI 352
    Assignment 2
    7/24/2015
 
-   reads transactions.txt and edits a b-tree
+   Reads transactions.txt and edits b-tree file.
 
  */
 
@@ -16,32 +19,28 @@
 
 #define BUF_SIZE 1024
 
-struct PriceChange
-{
-  char code[9];
-  int sold;
-  int dollar;
-  int cent;
-  int sales;
-};
 
-struct PriceChange *pricechanges;
-
-int monthReport(struct Node *node);
-
+// Get transaction and execute transaction functions.
 int getTransaction(char *line, char *action, char *code);
 int exeAction(char *action, char *code, char *line, int linepos);
 
+// Process transaction functions.
 int itemChange(char *action, char *code, char *line, int linepos);
 int updateHistory(struct Data *item, int sale);
+int updateSales(struct Data *item, int sold);
 int changePrice(char *line, struct Node *node, int datapos, int linepos);
 int addItem(char *line);
 int deleteItem(char *code);
 
+// Report functions.
+int monthReport(struct Node *node);
+int printItem(struct Node *node, int i);
+
+
 int main (int argc, char** argv) {
 
   if (argc < 2){
-    printf("usage: ./editbtree [TRANSACTIONS FILE]\n");
+    printf("usage: ./updatebtree [TRANSACTIONS FILE]\n");
     return 0;
   }
 
@@ -196,9 +195,7 @@ int itemChange(char *action, char *code, char *line, int linepos){
       }else{
         node.data[datapos].stock = newStock;
         updateHistory(&(node.data[datapos]), atoi(amount));
-        node.data[datapos].sold = 1;
-
-
+        updateSales(&(node.data[datapos]), atoi(amount));
       }
     }else if (strcmp(action, "DELIVERY") == 0){
       newStock = (node.data[datapos].stock) + atoi(amount); 
@@ -240,7 +237,21 @@ int changePrice(char *line, struct Node *node, int datapos, int linepos){
   node->data[datapos].dollar = atoi(dollars);
   node->data[datapos].cent = atoi(cents);
 
+
   saveNode(node);
+  return 0;
+
+}
+
+int updateSales(struct Data *item, int sold){
+
+  char price[12];  
+
+  sprintf(price, "%d.%d", item->dollar, item->cent);
+ 
+  float saleAmount = sold * strtof(price, NULL);
+
+  item->profit += saleAmount;
 
   return 0;
 
@@ -310,30 +321,6 @@ int deleteItem(char *code){
 }
 
 
-int printItem(struct Node *node, int i){
-
-  char price[10];
-
-  //item had no sale for the month
-  if(node->data[i].sold != 1){
-    updateHistory(&(node->data[i]), 0);
-  }
-
-  //check from price changes
-
-
-  //calculate sales profit
-
-  sprintf(price, "%d.%d", node->data[i].dollar, node->data[i].cent);
- 
-  float saleAmount = node->data[i].history[0] * strtof(price, NULL);
-
-  printf("%s:%s Sales: $%.2f\n", node->data[i].code, node->data[i].desc, saleAmount);
-
-  node->data[i].sold = 0;
-
-  return 0;
-}
 
 int monthReport(struct Node *node){
   
@@ -367,3 +354,16 @@ int monthReport(struct Node *node){
 }
 
 
+int printItem(struct Node *node, int i){
+
+  //item had no sale for the month
+  if(node->data[i].profit == 1){
+    updateHistory(&(node->data[i]), 0);
+  }
+
+  printf("%s:%s Sales: $%.2f\n", node->data[i].code, node->data[i].desc, node->data[i].profit);
+
+  node->data[i].profit = 0;
+
+  return 0;
+}

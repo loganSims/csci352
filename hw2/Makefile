@@ -1,26 +1,22 @@
 CC = gcc
 CFLAGS = -Wall -g
 LDFLAGS = -g
-OBJECTS1 = btree.o initbtree.o 
+OBJECTS1 = btree.o loadbtree.o 
 OBJECTS2 = btree.o readtree.o 
-OBJECTS3 = btree.o editbtree.o 
-OBJECTS4 = btree.o size.o 
+OBJECTS3 = btree.o updatebtree.o 
 
-EXES = initbtree readtree editbtree size
+EXES = loadbtree readtree updatebtree
 
 all: $(EXES)
 
-initbtree:	$(OBJECTS1)
+loadbtree:	$(OBJECTS1)
 	$(CC) -o $@ $(LDFLAGS) $(OBJECTS1)
 
 readtree:	$(OBJECTS2)
 	$(CC) -o $@ $(LDFLAGS) $(OBJECTS2)
 
-editbtree:	$(OBJECTS3)
+updatebtree:	$(OBJECTS3)
 	$(CC) -o $@ $(LDFLAGS) $(OBJECTS3)
-
-size:	$(OBJECTS4)
-	$(CC) -o $@ $(LDFLAGS) $(OBJECTS4)
 
 %.o:	%.c %.h
 	$(CC) -c $(CFLAGS) $< -o $@
