@@ -1,12 +1,12 @@
 CC = gcc
 CFLAGS = -Wall -g
 LDFLAGS = -g
-OBJECTS1 = access.o explorer.o
-EXES = explorer
+OBJECTS1 = access.o browser.o
+EXES = browser
 PKG = `pkg-config --cflags --libs gtk+-3.0`
 all: $(EXES)
 
-explorer:	$(OBJECTS1)
+browser:	$(OBJECTS1)
 	$(CC) -o $@ $(LDFLAGS) $(OBJECTS1) $(PKG)
 
 %.o:	%.c

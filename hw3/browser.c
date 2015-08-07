@@ -1,28 +1,28 @@
 #include <gtk/gtk.h>
+#include "access.h"
 
 static void destroy (GtkWidget*, gpointer);
-static void setupWindow(GtkWidget**);
+static void setupWindow(GtkWidget* window);
 
-static void addDirInfoToStore(GtkListStore **dirstore, GtkWidget **dirview);
-static void renderDirview(GtkWidget **dirview);
+static void addDirInfoToStore(GtkListStore *dirstore, GtkWidget *dirview);
+static void renderDirview(GtkWidget *dirview);
 
 enum {
-  NAME_COLUMN,
+  NAME_COLUMN = 0,
   SIZE_COLUMN,
   DATE_COLUMN,
   PERM_COLUMN,
-  COLOR_COLUMN,
   N_COLUMNS
 };
 
-#define N_COLUMNS 4
 
 const gchar* colnames[] = { "Name", "Size", "Date", "Permissions" };
 
 int main (int argc, char *argv[]){
 
   GtkWidget *window, *hpaned, *vpaned, *dirview;
-  
+  GtkListStore *dirstore;
+
   gtk_init (&argc, &argv);
 
   //filler
@@ -30,7 +30,11 @@ int main (int argc, char *argv[]){
   GtkWidget *button2 = gtk_button_new_with_label ("hex");
   //end filler
 
-  GtkListStore *dirstore;
+  // setup window
+  window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+  setupWindow(window);
+
+  // set up dir view
   dirstore = gtk_list_store_new (N_COLUMNS,
                                  G_TYPE_STRING,  /* File name          */
                                  G_TYPE_STRING,  /* File size          */
@@ -39,18 +43,17 @@ int main (int argc, char *argv[]){
 
 
 
-  setupWindow(&window);
+  dirview = gtk_tree_view_new_with_model (GTK_TREE_MODEL (dirstore));
 
-  //set up panes
+  addDirInfoToStore(dirstore, dirview);
+  renderDirview(dirview);
+
+  //set up panes & pack them
   hpaned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
   vpaned = gtk_paned_new (GTK_ORIENTATION_VERTICAL);
 
   gtk_widget_set_size_request(hpaned, 200, 500);
   gtk_widget_set_size_request(vpaned, 500, 500);
-
-
-  addDirInfoToStore(&dirstore, &dirview);
-  renderDirview(&dirview);
 
  
 
@@ -69,28 +72,27 @@ int main (int argc, char *argv[]){
 }
 
 
-static void addDirInfoToStore(GtkListStore **dirstore, GtkWidget **dirview){
+static void addDirInfoToStore(GtkListStore *dirstore, GtkWidget *dirview){
 
   int i;
   GtkTreeIter iter;
 
   for( i = 0; i < 2; i++){
 
-    gtk_list_store_append (*dirstore, &iter);
+    gtk_list_store_append (dirstore, &iter);
 
     //TODO real data
-    gtk_list_store_set (*dirstore, &iter,
+    gtk_list_store_set (dirstore, &iter,
                         NAME_COLUMN, "file1",
                         SIZE_COLUMN, "100 Kb",
                         DATE_COLUMN, "08/22/15",
                         PERM_COLUMN, "rwxr-xr--",-1);
 
-    *dirview = gtk_tree_view_new_with_model (GTK_TREE_MODEL (*dirstore));
-
   }
+  dirview = gtk_tree_view_new_with_model (GTK_TREE_MODEL (dirstore));
 }
 
-static void renderDirview(GtkWidget **dirview){
+static void renderDirview(GtkWidget *dirview){
 
   int i;
   int j = 0;
@@ -109,19 +111,18 @@ static void renderDirview(GtkWidget **dirview){
     gtk_tree_view_column_set_min_width (column, 60);
     gtk_tree_view_column_set_max_width (column, 200);
 
-    gtk_tree_view_append_column (GTK_TREE_VIEW (*dirview), column);
+    gtk_tree_view_append_column (GTK_TREE_VIEW (dirview), column);
     j++;
   }
 
 }
 
-static void setupWindow(GtkWidget **window){
-  *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-  gtk_window_set_title (GTK_WINDOW (*window), "File Explorer");
-  gtk_container_set_border_width (GTK_CONTAINER (*window), 10);
-  gtk_widget_set_size_request (*window, 700, 500);
+static void setupWindow(GtkWidget *window){
+  gtk_window_set_title (GTK_WINDOW (window), "File Explorer");
+  gtk_container_set_border_width (GTK_CONTAINER (window), 10);
+  gtk_widget_set_size_request (window, 700, 500);
 
-  g_signal_connect (G_OBJECT (*window), "destroy",
+  g_signal_connect (G_OBJECT (window), "destroy",
                     G_CALLBACK (destroy), NULL);
 }
 
