@@ -117,7 +117,7 @@ static void add_info_dirstore(GtkListStore *dirstore, char *path){
         ((sb.st_size < 1000) ? "B" : "KiB") );
     gtk_list_store_append (dirstore, &iter);
 
-    // setup icon  TODO c file, exe file, ...
+    // setup icon
     switch (sb.st_mode & S_IFMT) {
       case S_IFDIR: icon = dir_icon; break; //directory
       case S_IFREG: icon = file_icon; break; //reg file
