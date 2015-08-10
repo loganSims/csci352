@@ -5,55 +5,50 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <time.h>
+#include <string.h>
 
 #define BUF_SIZE 1024
 
-int get_subdir(char *path);
+int get_subdir(char *path, int level);
 int get_files_in_dir(char *path);
 
-
+/*
 int main (int argc, char** argv) {
 
-  struct stat sb;
-
   char *path = "/home/logan/Desktop/";
-  //char *path = "/";
 
-  stat(path, &sb);
-
-  switch (sb.st_mode & S_IFMT) {
-    case S_IFBLK:  printf("block dev\n"); break;
-    case S_IFCHR:  printf("character device\n"); break;
-    case S_IFDIR:  printf("directory\n"); 
-                   //get_subdir(path);
-                   get_files_in_dir(path);
-                   break;
-    case S_IFREG:  printf("regular file\n"); 
-                   break;
-    case S_IFIFO:  printf("fifo\n"); break;
-    case S_IFLNK:  printf("symlink\n"); break;
-    case S_IFSOCK: printf("socket\n"); break;
-    default:       printf("unknown?\n"); break;
-  }
-
+  get_subdir(path, 0);
+  
   return 0;
-}
 
-int get_subdir(char *path){
+}
+*/
+
+int get_subdir(char *path, int level){
 
   DIR *dp;
   struct stat sb;
   struct dirent *entry;
 
   dp = opendir(path);
+ 
+  if (dp == NULL){
+    return -1;
+  }
 
   char entrypath[256];
 
   while((entry = readdir(dp))){
     snprintf(entrypath, 256, "%s%s", path, entry->d_name);
-    stat(entrypath, &sb); 
-    if((sb.st_mode & S_IFMT) == S_IFDIR){
-      printf("%s\n", entry->d_name);
+    stat(entrypath, &sb);
+    if(S_ISDIR(sb.st_mode)){
+      if (entry->d_name[0] != '.'){
+        //add children
+        printf("level %d, %s\n", level, entry->d_name);
+        snprintf(entrypath, 256, "%s%s/", path, entry->d_name);
+        get_subdir(entrypath, level+1);
+        
+      }
     }
   }
 
