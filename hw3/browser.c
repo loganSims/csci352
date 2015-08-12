@@ -1,19 +1,30 @@
 #include <gtk/gtk.h>
+#include <string.h>
 #include "access.h"
 
-#define MAX_DEPTH 100000
+#define MAX_DEPTH 1000
+#define MAX_DIRLEN 256
 
 static void display (GtkWidget* hpaned);
 
 static void build_dirstore(GtkListStore *dirstore, char *path);
 static void build_dirview(GtkWidget *dirview);
 
-static int build_sysstore(GtkTreeStore *treestore, char *path, GtkTreeIter *iter, int level);
-static void build_sysview(GtkWidget *sysview);
+static int build_sysstore(GtkTreeStore *treestore, char *path,
+                          GtkTreeIter *iter, int level);
 
+static void build_sysview(GtkWidget *sysview, GtkWidget *dirview);
+
+void update_dir(GtkTreeSelection *selection, GtkWidget *dirview);
 
 void dir_item_selected (GtkWidget *selection, gpointer data);
 
+struct Ddata {
+  char *path;
+  GtkWidget *dirview;
+};
+
+// Used for making Directory section
 enum {
   NAME_COLUMN = 0,
   SIZE_COLUMN,
@@ -23,18 +34,20 @@ enum {
   N_COLUMNS
 };
 
+// Used for making System section
 enum {
   TNAME_COLUMN = 0,
   TICON_COLUMN,
+  TLEVEL,
   T_COLUMNS
 };
 
 const gchar *colnames[] = { "Name", "Size", "Date", "Permissions" };
 
-char *path = "/";
 
 int main (int argc, char *argv[]){
 
+  char start_path[MAX_DIRLEN] = "/home/\0";
   GtkWidget *hpaned, *vpaned, *dirview;
 
   gtk_init (&argc, &argv);
@@ -52,7 +65,7 @@ int main (int argc, char *argv[]){
                                               G_TYPE_STRING, /*Access Perm */
                                               GDK_TYPE_PIXBUF); /*Icon     */
 
-  build_dirstore(dirstore, path);
+  build_dirstore(dirstore, start_path);
 
   // setup dirview
   dirview = gtk_tree_view_new ();
@@ -66,21 +79,22 @@ int main (int argc, char *argv[]){
   // setup sysstore
   GtkTreeStore *sysstore = gtk_tree_store_new(T_COLUMNS, 
                                               G_TYPE_STRING, 
-                                              GDK_TYPE_PIXBUF);
+                                              GDK_TYPE_PIXBUF,
+                                              G_TYPE_INT);
 
   GtkTreeIter iter[MAX_DEPTH];
-  build_sysstore(sysstore, path, iter, 0);
+  build_sysstore(sysstore, start_path, iter, 0);
 
   // setup sysview
   GtkWidget *sysview = gtk_tree_view_new();
-  build_sysview(sysview);
+  build_sysview(sysview, dirview);
 
   // connect sysview adn sysstore
   gtk_tree_view_set_model(GTK_TREE_VIEW(sysview), GTK_TREE_MODEL(sysstore));
 
 
-  //g_object_inref(dirstore);
-  //g_object_inref(sysstore);
+  g_object_unref(dirstore);
+  g_object_unref(sysstore);
 
   //setup panes & pack them
   hpaned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
@@ -125,7 +139,7 @@ static void build_dirstore(GtkListStore *dirstore, char *path){
   struct stat sb;
   struct dirent *entry;
   struct tm time;
-  char entrypath[256];
+  char entrypath[MAX_DIRLEN];
   char modtime[9];
   char permission[10];
   char size[15];
@@ -142,7 +156,7 @@ static void build_dirstore(GtkListStore *dirstore, char *path){
   while((entry = readdir(dp))){
 
     // Get path of entry for stat
-    snprintf(entrypath, 256, "%s%s", path, entry->d_name);
+    snprintf(entrypath, MAX_DIRLEN, "%s%s", path, entry->d_name);
     stat(entrypath, &sb);
 
     // Format time
@@ -243,6 +257,54 @@ void dir_item_selected (GtkWidget *selection, gpointer data) {
 }
 
 
+void update_dir(GtkTreeSelection *selection, GtkWidget *dirview){
+
+  GtkTreeModel *model;
+  GtkTreeIter child;
+  GtkTreeIter parent;
+  gchar *dirname;
+  char path[MAX_DIRLEN];
+  char newpath[MAX_DIRLEN];
+
+  if (gtk_tree_selection_get_selected (GTK_TREE_SELECTION(selection), 
+                                       &model, &child)) {
+      
+    gtk_tree_model_get (model, &child, TNAME_COLUMN, &dirname, -1);
+    sprintf(path, "/%s/", dirname);
+
+    while (gtk_tree_model_iter_parent(model, &parent, &child) != FALSE){
+
+      gtk_tree_model_get(model, &parent, TNAME_COLUMN, &dirname, -1);
+
+      sprintf(newpath, "/%s%s", dirname, path);
+
+      strcpy(path, newpath);
+      newpath[0] = '\0';
+
+      child = parent;
+
+    }
+
+    GtkListStore *dirstore = gtk_list_store_new(N_COLUMNS,
+                                                G_TYPE_STRING, /*File name   */
+                                                G_TYPE_STRING, /*File size   */
+                                                G_TYPE_STRING, /*Mod Date    */
+                                                G_TYPE_STRING, /*Access Perm */
+                                                GDK_TYPE_PIXBUF); /*Icon     */
+
+  
+
+    build_dirstore(dirstore, path);
+
+    //connect dirview and dirstore
+    gtk_tree_view_set_model (GTK_TREE_VIEW (dirview), 
+                             GTK_TREE_MODEL (dirstore));
+
+    g_object_unref(dirstore);
+  
+  }
+}
+
 static int build_sysstore(GtkTreeStore *treestore, char *path, GtkTreeIter *iter, int level){
   
   DIR *dp;
@@ -261,14 +323,15 @@ static int build_sysstore(GtkTreeStore *treestore, char *path, GtkTreeIter *iter
     gtk_tree_store_append (treestore, &(iter[level]), NULL);
     gtk_tree_store_set (treestore, &(iter[level]), 
                         TNAME_COLUMN, "home",
-                        TICON_COLUMN, dir_icon, -1);
+                        TICON_COLUMN, dir_icon,
+                        TLEVEL, level, -1);
     level++;
   }
 
-  char entrypath[256];
+  char entrypath[MAX_DIRLEN];
 
   while((entry = readdir(dp))){
-    snprintf(entrypath, 256, "%s%s", path, entry->d_name);
+    snprintf(entrypath, MAX_DIRLEN, "%s%s", path, entry->d_name);
     stat(entrypath, &sb);
     if(S_ISDIR(sb.st_mode)){
       if (entry->d_name[0] != '.'){   
@@ -278,7 +341,7 @@ static int build_sysstore(GtkTreeStore *treestore, char *path, GtkTreeIter *iter
                             TNAME_COLUMN, entry->d_name,
                             TICON_COLUMN, dir_icon, -1);
      
-        snprintf(entrypath, 256, "%s%s/", path, entry->d_name);
+        snprintf(entrypath, MAX_DIRLEN, "%s%s/", path, entry->d_name);
         build_sysstore(treestore, entrypath, iter, (level+1));  
       }
     }
@@ -287,16 +350,33 @@ static int build_sysstore(GtkTreeStore *treestore, char *path, GtkTreeIter *iter
   closedir(dp);
   return 0;
 }
-static void build_sysview(GtkWidget *sysview){
+static void build_sysview(GtkWidget *sysview, GtkWidget *dirview){
 
     GtkCellRenderer *renderer;
     GtkTreeViewColumn *column;
 
     // add the Position to the treeview
+    column = gtk_tree_view_column_new();
+
+    renderer = gtk_cell_renderer_pixbuf_new();
+    gtk_tree_view_column_pack_start(column, renderer, FALSE);
+    gtk_tree_view_column_set_attributes(column, renderer, 
+                                        "pixbuf", TICON_COLUMN, NULL);
+
     renderer = gtk_cell_renderer_text_new();
-    column = gtk_tree_view_column_new_with_attributes (
-                "", renderer, "text", TNAME_COLUMN, NULL);    
+    gtk_tree_view_column_pack_start(column, renderer, FALSE);
+    gtk_tree_view_column_set_attributes(column, renderer, 
+                                        "text", TNAME_COLUMN, NULL);
+
     gtk_tree_view_append_column (GTK_TREE_VIEW (sysview), column);
+
+    // add selection handling
+    GtkTreeSelection *selection;
+    selection = gtk_tree_view_get_selection (GTK_TREE_VIEW(sysview));
+
+    // connect the selection callback function
+    g_signal_connect(G_OBJECT(selection), "changed",
+                     G_CALLBACK(update_dir), dirview);
 
 }
 
