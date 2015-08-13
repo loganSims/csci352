@@ -1,8 +1,10 @@
 #include <gtk/gtk.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "access.h"
 
-#define MAX_DEPTH 1000
+#define MAX_LINE 1240
 #define MAX_DIRLEN 256
 
 // Used for making Directory section
@@ -64,23 +66,28 @@ int main (int argc, char *argv[]){
 
   struct HexData hexbuffs;
   
-  GtkWidget *hpaned, *vpaned, *dirview, *hexbox;
+  GtkWidget *hpaned, *vpaned, *dirview, *hexpaned, *hexpanedr;
 
   GtkWidget *addview = gtk_text_view_new();
   GtkWidget *hexview = gtk_text_view_new();
   GtkWidget *ascview = gtk_text_view_new();
+  gtk_widget_set_size_request(addview, 70, 225);
+  gtk_widget_set_size_request(hexview, 300, 225);
+  gtk_widget_set_size_request(ascview, 100, 225);
 
   hexbuffs.addbuff = gtk_text_view_get_buffer(GTK_TEXT_VIEW (addview));  
   hexbuffs.hexbuff = gtk_text_view_get_buffer(GTK_TEXT_VIEW (hexview));  
   hexbuffs.ascbuff = gtk_text_view_get_buffer(GTK_TEXT_VIEW (ascview));  
 
   // Fill hexbox with textviews
+  hexpaned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
+  hexpanedr = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
 
-  hexbox = gtk_box_new (FALSE, 5);
+  gtk_paned_pack1 (GTK_PANED (hexpanedr), hexview, TRUE, FALSE);
+  gtk_paned_pack2 (GTK_PANED (hexpanedr), ascview, TRUE, FALSE);
 
-  gtk_box_pack_start (GTK_BOX (hexbox), addview, FALSE, FALSE, 5);
-  gtk_box_pack_start (GTK_BOX (hexbox), hexview, FALSE, FALSE, 5);
-  gtk_box_pack_start (GTK_BOX (hexbox), ascview, FALSE, FALSE, 5);
+  gtk_paned_pack1 (GTK_PANED (hexpaned), addview, TRUE, FALSE);
+  gtk_paned_pack2 (GTK_PANED (hexpaned), hexpanedr, TRUE, FALSE);
 
 
   // setup dirstore
@@ -126,7 +133,7 @@ int main (int argc, char *argv[]){
   //setup panes & pack them
   hpaned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
   vpaned = gtk_paned_new (GTK_ORIENTATION_VERTICAL);
-  gtk_widget_set_size_request(hpaned, 200, 500);
+  gtk_widget_set_size_request(hpaned, 700, 500);
   gtk_widget_set_size_request(vpaned, 500, 500);
 
 
@@ -136,7 +143,7 @@ int main (int argc, char *argv[]){
                                   GTK_POLICY_AUTOMATIC,
                                   GTK_POLICY_AUTOMATIC);
 
-  gtk_container_add (GTK_CONTAINER (hex_scroller), hexbox);
+  gtk_container_add (GTK_CONTAINER (hex_scroller), hexpaned);
 
   // create a scrolled window for dirview
   GtkWidget* dir_scroller = gtk_scrolled_window_new (NULL, NULL);
@@ -384,7 +391,7 @@ void dir_item_selected (GtkWidget *selection, struct HexData *hexbuffs) {
         snprintf(filepath, MAX_DIRLEN, "%s%s", w_path, name);
 
         g_message("selected %s\n", filepath);
-        //fill_hex_display(filepath, hexbuffs); 
+        fill_hex_display(filepath, hexbuffs); 
 
     }
 }
@@ -457,7 +464,70 @@ void sys_item_selected(GtkTreeSelection *selection, GtkWidget *dirview){
 
 int fill_hex_display(char *filepath, struct HexData *hexbuffs){
 
+  int i;
+  int addint = 0;
+  char line[17];
+  char addstr[10];
+  char hexstr[4];
+  GtkTextIter additer;
+  GtkTextIter hexiter;  
+  GtkTextIter asciter;  
+  GtkTextIter start;  
+  GtkTextIter end;  
 
+  int input;
+    
+  if ((input = open(filepath, O_RDONLY)) < 0) {
+      printf("File %s not found\n", filepath);
+      return 1;
+  }
+
+
+  //clear out buffers
+  gtk_text_buffer_get_end_iter (hexbuffs->hexbuff, &end);
+  gtk_text_buffer_get_start_iter (hexbuffs->hexbuff, &start);
+  gtk_text_buffer_delete (hexbuffs->hexbuff, &start, &end);
+
+  gtk_text_buffer_get_end_iter (hexbuffs->addbuff, &end);
+  gtk_text_buffer_get_start_iter (hexbuffs->addbuff, &start);
+  gtk_text_buffer_delete (hexbuffs->addbuff, &start, &end);
+
+  gtk_text_buffer_get_end_iter (hexbuffs->ascbuff, &end);
+  gtk_text_buffer_get_start_iter (hexbuffs->ascbuff, &start);
+  gtk_text_buffer_delete (hexbuffs->ascbuff, &start, &end);
+
+
+  // initialize the buffer's iterator
+  gtk_text_buffer_get_iter_at_offset(hexbuffs->addbuff, &additer, 0);
+  gtk_text_buffer_get_iter_at_offset(hexbuffs->hexbuff, &hexiter, 0);
+  gtk_text_buffer_get_iter_at_offset(hexbuffs->ascbuff, &asciter, 0);
+    
+  // add each line from the file to the buffer
+  while (read(input, line, 16) > 0){ 
+     line[16] = '\0';
+     snprintf(addstr, 10, "%08d\n", addint);
+     gtk_text_buffer_insert (hexbuffs->addbuff, &additer, addstr, -1);
+
+     //remove unprintable for ascii column
+     for(i = 0; i < 16; i++){
+       
+       snprintf(hexstr, 3, "%2x ", line[i]);
+       hexstr[3] = '\0';
+       gtk_text_buffer_insert (hexbuffs->hexbuff, &hexiter, hexstr, -1);
+
+       if(line[i] < 32 || line[i] > 126){
+         line[i] = '.';
+       }  
+     }
+     gtk_text_buffer_insert (hexbuffs->ascbuff, &asciter, line, -1);
+     gtk_text_buffer_insert (hexbuffs->ascbuff, &asciter, "\n", -1);
+     gtk_text_buffer_insert (hexbuffs->hexbuff, &hexiter, "\n", -1);
+     addint += 16;
+  }
+
+  int j = gtk_text_buffer_get_line_count (hexbuffs->ascbuff);
+
+  g_message("%d\n", j);
 
   return 0;
 }
