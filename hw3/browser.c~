@@ -6,6 +6,7 @@
 
 #define MAX_LINE 1240
 #define MAX_DIRLEN 256
+#define DEBUG 1
 
 // Used for making Directory section
 enum {
@@ -482,7 +483,6 @@ int fill_hex_display(char *filepath, struct HexData *hexbuffs){
       return 1;
   }
 
-
   //clear out buffers
   gtk_text_buffer_get_end_iter (hexbuffs->hexbuff, &end);
   gtk_text_buffer_get_start_iter (hexbuffs->hexbuff, &start);
@@ -511,7 +511,7 @@ int fill_hex_display(char *filepath, struct HexData *hexbuffs){
      //remove unprintable for ascii column
      for(i = 0; i < 16; i++){
        
-       snprintf(hexstr, 3, "%2x ", line[i]);
+       snprintf(hexstr, 4, " %02x", line[i]);
        hexstr[3] = '\0';
        gtk_text_buffer_insert (hexbuffs->hexbuff, &hexiter, hexstr, -1);
 
@@ -525,10 +525,14 @@ int fill_hex_display(char *filepath, struct HexData *hexbuffs){
      addint += 16;
   }
 
+#if DEBUG
   int j = gtk_text_buffer_get_line_count (hexbuffs->ascbuff);
-
   g_message("%d\n", j);
-
+  j = gtk_text_buffer_get_line_count (hexbuffs->hexbuff);
+  g_message("%d\n", j);
+  j = gtk_text_buffer_get_line_count (hexbuffs->addbuff);
+  g_message("%d\n", j);
+#endif
   return 0;
 }
 

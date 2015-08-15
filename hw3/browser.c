@@ -6,6 +6,7 @@
 
 #define MAX_LINE 1240
 #define MAX_DIRLEN 256
+#define DEBUG 1
 
 // Used for making Directory section
 enum {
@@ -27,9 +28,9 @@ enum {
 
 struct HexData
 {
-  GtkTextBuffer* addbuff;  
-  GtkTextBuffer* hexbuff;  
-  GtkTextBuffer* ascbuff; 
+  GtkWidget *addview;  
+  GtkWidget *hexview;  
+  GtkWidget *ascview; 
 };
 
 static void display (GtkWidget* hpaned);
@@ -64,7 +65,7 @@ int main (int argc, char *argv[]){
 
   char *start_path = "/";
 
-  struct HexData hexbuffs;
+  struct HexData hexinfo;
   
   GtkWidget *hpaned, *vpaned, *dirview, *hexpaned, *hexpanedr;
 
@@ -73,20 +74,25 @@ int main (int argc, char *argv[]){
   GtkWidget *ascview = gtk_text_view_new();
   gtk_widget_set_size_request(addview, 70, 225);
   gtk_widget_set_size_request(hexview, 300, 225);
-  gtk_widget_set_size_request(ascview, 100, 225);
+  gtk_widget_set_size_request(ascview, 125, 225);
 
-  hexbuffs.addbuff = gtk_text_view_get_buffer(GTK_TEXT_VIEW (addview));  
-  hexbuffs.hexbuff = gtk_text_view_get_buffer(GTK_TEXT_VIEW (hexview));  
-  hexbuffs.ascbuff = gtk_text_view_get_buffer(GTK_TEXT_VIEW (ascview));  
+  gtk_text_view_set_editable(GTK_TEXT_VIEW(addview),FALSE);
+  gtk_text_view_set_editable(GTK_TEXT_VIEW(hexview),FALSE);
+  gtk_text_view_set_editable(GTK_TEXT_VIEW(ascview),FALSE);
+
+  hexinfo.addview = addview;
+  hexinfo.hexview = hexview;
+  hexinfo.ascview = ascview;
+
 
   // Fill hexbox with textviews
   hexpaned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
   hexpanedr = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
 
-  gtk_paned_pack1 (GTK_PANED (hexpanedr), hexview, TRUE, FALSE);
-  gtk_paned_pack2 (GTK_PANED (hexpanedr), ascview, TRUE, FALSE);
+  gtk_paned_pack1 (GTK_PANED (hexpanedr), hexinfo.hexview, TRUE, FALSE);
+  gtk_paned_pack2 (GTK_PANED (hexpanedr), hexinfo.ascview, TRUE, FALSE);
 
-  gtk_paned_pack1 (GTK_PANED (hexpaned), addview, TRUE, FALSE);
+  gtk_paned_pack1 (GTK_PANED (hexpaned), hexinfo.addview, TRUE, FALSE);
   gtk_paned_pack2 (GTK_PANED (hexpaned), hexpanedr, TRUE, FALSE);
 
 
@@ -102,7 +108,7 @@ int main (int argc, char *argv[]){
 
   // setup dirview
   dirview = gtk_tree_view_new ();
-  build_dirview(dirview, &hexbuffs);
+  build_dirview(dirview, &hexinfo);
 
   //connect dirview and dirstore
   gtk_tree_view_set_model (GTK_TREE_VIEW (dirview), 
@@ -133,8 +139,8 @@ int main (int argc, char *argv[]){
   //setup panes & pack them
   hpaned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
   vpaned = gtk_paned_new (GTK_ORIENTATION_VERTICAL);
-  gtk_widget_set_size_request(hpaned, 700, 500);
-  gtk_widget_set_size_request(vpaned, 500, 500);
+  gtk_widget_set_size_request(hpaned, 800, 500);
+  gtk_widget_set_size_request(vpaned, 600, 500);
 
 
   // create a scrolled window for hexbox
@@ -172,8 +178,6 @@ int main (int argc, char *argv[]){
   gtk_paned_pack1 (GTK_PANED (hpaned), sys_scroller, TRUE, FALSE);
   gtk_paned_pack2 (GTK_PANED (hpaned), vpaned, FALSE, FALSE);
 
-
-
   display(hpaned);
 
   gtk_main ();
@@ -196,6 +200,8 @@ static void build_dirstore(GtkListStore *dirstore, char *path){
   GdkPixbuf* file_icon = gdk_pixbuf_new_from_file("file_icon.png", &error);
   GdkPixbuf* other_icon = gdk_pixbuf_new_from_file("icon2.png", &error);
   GdkPixbuf* icon;
+
+  gtk_list_store_clear(dirstore);
 
   dp = opendir(path);
 
@@ -238,10 +244,15 @@ static void build_dirstore(GtkListStore *dirstore, char *path){
 
       }
     }
+  free(dp);
   }
+  g_object_unref(dir_icon);
+  g_object_unref(file_icon);
+  g_object_unref(other_icon);
+
 }
 
-static void build_dirview(GtkWidget *dirview, struct HexData *hexbuffs){
+static void build_dirview(GtkWidget *dirview, struct HexData *hexinfo){
 
   int i;
   int j = 0;
@@ -271,8 +282,6 @@ static void build_dirview(GtkWidget *dirview, struct HexData *hexbuffs){
 
     gtk_tree_view_column_set_title(column, colnames[j]);
     gtk_tree_view_column_set_resizable (column, TRUE);
-    gtk_tree_view_column_set_min_width (column, 60);
-    gtk_tree_view_column_set_max_width (column, 200);
 
     if (j != PERM_COLUMN){
       gtk_tree_view_column_set_sort_indicator(column, TRUE);           
@@ -289,7 +298,7 @@ static void build_dirview(GtkWidget *dirview, struct HexData *hexbuffs){
     
   // connect the selection callback function
   g_signal_connect (G_OBJECT(selection), "changed", 
-                    G_CALLBACK(dir_item_selected), hexbuffs);
+                    G_CALLBACK(dir_item_selected), hexinfo);
 
 }
 
@@ -341,6 +350,8 @@ static int build_sysstore(GtkTreeStore *sysstore, GtkTreeIter *iter, char *path,
     closedir(dp);
   }
 
+  g_object_unref(dir_icon);
+
   return 0;
 }
 static void build_sysview(GtkWidget *sysview, GtkWidget *dirview){
@@ -376,7 +387,7 @@ static void build_sysview(GtkWidget *sysview, GtkWidget *dirview){
 
 
 // Start hex viewer
-void dir_item_selected (GtkWidget *selection, struct HexData *hexbuffs) {
+void dir_item_selected (GtkWidget *selection, struct HexData *hexinfo) {
 
     GtkTreeModel *model;
     GtkTreeIter iter;
@@ -391,7 +402,7 @@ void dir_item_selected (GtkWidget *selection, struct HexData *hexbuffs) {
         snprintf(filepath, MAX_DIRLEN, "%s%s", w_path, name);
 
         g_message("selected %s\n", filepath);
-        fill_hex_display(filepath, hexbuffs); 
+        fill_hex_display(filepath, hexinfo); 
 
     }
 }
@@ -399,7 +410,8 @@ void dir_item_selected (GtkWidget *selection, struct HexData *hexbuffs) {
 
 void sys_item_selected(GtkTreeSelection *selection, GtkWidget *dirview){
 
-  GtkTreeModel *model;
+  GtkTreeModel *sysmodel;
+  GtkTreeModel *dirmodel;
   GtkTreeIter iter;
   GtkTreeIter child;
   GtkTreeIter parent;
@@ -410,18 +422,18 @@ void sys_item_selected(GtkTreeSelection *selection, GtkWidget *dirview){
   // Part (a) build path
 
   if (gtk_tree_selection_get_selected (GTK_TREE_SELECTION(selection), 
-                                       &model, &child)) {
+                                       &sysmodel, &child)) {
       
-    gtk_tree_model_get (model, &child, TNAME_COLUMN, &dirname, -1);
+    gtk_tree_model_get (sysmodel, &child, TNAME_COLUMN, &dirname, -1);
 
     if(strcmp(dirname, "/") == 0){ 
       snprintf(path, MAX_DIRLEN, "%s", dirname);
     }else{
       snprintf(path, MAX_DIRLEN, "%s/", dirname);
     } 
-    while (gtk_tree_model_iter_parent(model, &parent, &child) != FALSE){
+    while (gtk_tree_model_iter_parent(sysmodel, &parent, &child) != FALSE){
 
-      gtk_tree_model_get(model, &parent, TNAME_COLUMN, &dirname, -1);
+      gtk_tree_model_get(sysmodel, &parent, TNAME_COLUMN, &dirname, -1);
 
       if(strcmp(dirname, "/") == 0){ 
         snprintf(newpath, MAX_DIRLEN, "%s%s", dirname, path);
@@ -437,43 +449,53 @@ void sys_item_selected(GtkTreeSelection *selection, GtkWidget *dirview){
     // Set global cwd to path
     strcpy(w_path, path);
 
-    // Part (b) build new dir store
+    // Part (b) get model and update with new data
+    dirmodel = gtk_tree_view_get_model(GTK_TREE_VIEW(dirview));
 
-    GtkListStore *dirstore = gtk_list_store_new(N_COLUMNS,
-                                                G_TYPE_STRING, /*File name   */
-                                                G_TYPE_STRING, /*File size   */
-                                                G_TYPE_STRING, /*Mod Date    */
-                                                G_TYPE_STRING, /*Access Perm */
-                                                GDK_TYPE_PIXBUF); /*Icon     */
-    build_dirstore(dirstore, path);
+    build_dirstore(GTK_LIST_STORE(dirmodel), path);
 
     //connect dirview and dirstore
-    gtk_tree_view_set_model (GTK_TREE_VIEW (dirview), 
-                             GTK_TREE_MODEL (dirstore));
 
-    g_object_unref(dirstore);
+    gtk_tree_view_set_model (GTK_TREE_VIEW (dirview), 
+                             dirmodel);
+
 
     // Part (c) update sys tree 
     if (gtk_tree_selection_get_selected (GTK_TREE_SELECTION(selection), 
-                                         &model, &iter)) {
-      build_sysstore(GTK_TREE_STORE(model), &iter, path, 0);
+                                         &sysmodel, &iter)) {
+      build_sysstore(GTK_TREE_STORE(sysmodel), &iter, path, 0);
     }  
   }
 }
 
 
-int fill_hex_display(char *filepath, struct HexData *hexbuffs){
+int fill_hex_display(char *filepath, struct HexData *hexinfo){
 
   int i;
   int addint = 0;
   char line[17];
-  char addstr[10];
+  char addstr[9];
   char hexstr[4];
   GtkTextIter additer;
   GtkTextIter hexiter;  
   GtkTextIter asciter;  
-  GtkTextIter start;  
-  GtkTextIter end;  
+
+  GtkTextBuffer *hexbuff = gtk_text_view_get_buffer(GTK_TEXT_VIEW(hexinfo->hexview)); 
+  GtkTextBuffer *addbuff = gtk_text_view_get_buffer(GTK_TEXT_VIEW(hexinfo->addview)); 
+  GtkTextBuffer *ascbuff = gtk_text_view_get_buffer(GTK_TEXT_VIEW(hexinfo->ascview)); 
+
+  GtkTextTagTable *hextable = gtk_text_tag_table_new();
+  GtkTextTagTable *addtable = gtk_text_tag_table_new();
+  GtkTextTagTable *asctable = gtk_text_tag_table_new();
+
+
+  hexbuff = gtk_text_buffer_new(hextable);
+  addbuff = gtk_text_buffer_new(addtable);
+  ascbuff = gtk_text_buffer_new(asctable);
+
+  g_object_unref(hextable);
+  g_object_unref(addtable);
+  g_object_unref(asctable);
 
   int input;
     
@@ -483,52 +505,46 @@ int fill_hex_display(char *filepath, struct HexData *hexbuffs){
   }
 
 
-  //clear out buffers
-  gtk_text_buffer_get_end_iter (hexbuffs->hexbuff, &end);
-  gtk_text_buffer_get_start_iter (hexbuffs->hexbuff, &start);
-  gtk_text_buffer_delete (hexbuffs->hexbuff, &start, &end);
-
-  gtk_text_buffer_get_end_iter (hexbuffs->addbuff, &end);
-  gtk_text_buffer_get_start_iter (hexbuffs->addbuff, &start);
-  gtk_text_buffer_delete (hexbuffs->addbuff, &start, &end);
-
-  gtk_text_buffer_get_end_iter (hexbuffs->ascbuff, &end);
-  gtk_text_buffer_get_start_iter (hexbuffs->ascbuff, &start);
-  gtk_text_buffer_delete (hexbuffs->ascbuff, &start, &end);
-
-
   // initialize the buffer's iterator
-  gtk_text_buffer_get_iter_at_offset(hexbuffs->addbuff, &additer, 0);
-  gtk_text_buffer_get_iter_at_offset(hexbuffs->hexbuff, &hexiter, 0);
-  gtk_text_buffer_get_iter_at_offset(hexbuffs->ascbuff, &asciter, 0);
+  gtk_text_buffer_get_iter_at_offset(addbuff, &additer, 0);
+  gtk_text_buffer_get_iter_at_offset(hexbuff, &hexiter, 0);
+  gtk_text_buffer_get_iter_at_offset(ascbuff, &asciter, 0);
     
   // add each line from the file to the buffer
   while (read(input, line, 16) > 0){ 
-     line[16] = '\0';
-     snprintf(addstr, 10, "%08d\n", addint);
-     gtk_text_buffer_insert (hexbuffs->addbuff, &additer, addstr, -1);
+     snprintf(addstr, 9, "%08d", addint);
+     addstr[8] = '\0';
+     gtk_text_buffer_insert (addbuff, &additer, addstr, -1);
+     gtk_text_buffer_insert (addbuff, &additer, "\n", -1);
 
      //remove unprintable for ascii column
      for(i = 0; i < 16; i++){
        
-       snprintf(hexstr, 4, "%2x ", line[i]);
+       snprintf(hexstr, 4, " %02x", line[i]);
        hexstr[3] = '\0';
-       gtk_text_buffer_insert (hexbuffs->hexbuff, &hexiter, hexstr, -1);
+       gtk_text_buffer_insert (hexbuff, &hexiter, hexstr, -1);
 
        if(line[i] < 32 || line[i] > 126){
          line[i] = '.';
        }  
      }
-     gtk_text_buffer_insert (hexbuffs->ascbuff, &asciter, line, -1);
-     gtk_text_buffer_insert (hexbuffs->ascbuff, &asciter, "\n", -1);
-     gtk_text_buffer_insert (hexbuffs->hexbuff, &hexiter, "\n", -1);
+     line[16] = '\0';
+     gtk_text_buffer_insert (ascbuff, &asciter, line, -1);
+     gtk_text_buffer_insert (ascbuff, &asciter, "\n", -1);
+     gtk_text_buffer_insert (hexbuff, &hexiter, "\n", -1);
      addint += 16;
+
+     gtk_text_view_set_buffer(GTK_TEXT_VIEW(hexinfo->hexview), hexbuff);
+     gtk_text_view_set_buffer(GTK_TEXT_VIEW(hexinfo->addview), addbuff);
+     gtk_text_view_set_buffer(GTK_TEXT_VIEW(hexinfo->ascview), ascbuff);
+
+     memset(line, 0, sizeof(line));
+     memset(addstr, 0, sizeof(addstr));
+   
   }
-
-  int j = gtk_text_buffer_get_line_count (hexbuffs->ascbuff);
-
-  g_message("%d\n", j);
-
+  g_object_unref(hexbuff);
+  g_object_unref(addbuff);
+  g_object_unref(ascbuff);
   return 0;
 }
 
@@ -538,7 +554,7 @@ void display (GtkWidget *hpaned) {
   GtkWidget* window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title (GTK_WINDOW (window), "File Explorer");
   gtk_container_set_border_width (GTK_CONTAINER (window), 10);
-  gtk_widget_set_size_request (window, 700, 500);
+  gtk_widget_set_size_request (window, 800, 500);
   g_signal_connect (window, "delete_event", gtk_main_quit, NULL);
     
   // pack the containers
