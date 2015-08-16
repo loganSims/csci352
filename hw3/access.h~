@@ -1,1 +1,0 @@
-int makePerm(struct stat *sb, char *perm);

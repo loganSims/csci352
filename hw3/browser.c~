@@ -1,3 +1,21 @@
+/*
+  browser.c
+
+  Logan Sims
+  CSCI 352
+  Assignment 3
+  08/17/2015
+
+  A file browser using GTK+3.0. The browser starts in the
+  root directory. 
+
+  IMPORTANT: A folder must be clicked on for the sub directories of that
+             folder to become available. This is because the program only 
+             loads the data form directories that were selected to save
+             on computation time. 
+
+*/
+
 #include <gtk/gtk.h>
 #include <string.h>
 #include <stdlib.h>
@@ -8,25 +26,28 @@
 #define MAX_DIRLEN 256
 #define DEBUG 1
 
-// Used for making Directory section
+// Enum used for making directory section of browser
 enum {
-  NAME_COLUMN = 0,
-  SIZE_COLUMN,
-  DATE_COLUMN,
-  PERM_COLUMN,
+  DNAME = 0,
+  DSIZE,
+  DDATE,
+  DPERM,
   UNIT,
-  ICON_COLUMN,
-  N_COLUMNS
+  DICON,
+  D_COLUMNS
 };
 
-// Used for making System section
+// Emun used for making System section
 enum {
-  TNAME_COLUMN = 0,
-  TICON_COLUMN,
+  TNAME = 0,
+  TICON,
   TPATH,
   T_COLUMNS
 };
 
+// Struct for holding the views of the
+// Hex editor, used in event handler for
+// directory item selection
 struct HexData
 {
   GtkWidget *addview;  
@@ -36,45 +57,60 @@ struct HexData
 
 static void display (GtkWidget* hpaned);
 
+// Directory Section
 static void build_dirstore(GtkListStore *dirstore, char *path);
 static void build_dirview(GtkWidget *dirview, struct HexData *hexbuffs);
 
+// System Section
 static int build_sysstore(GtkTreeStore *treestore, GtkTreeIter *iter, char *path, int is_root);
-
 static void build_sysview(GtkWidget *sysview, GtkWidget *dirview);
 
-void sys_item_selected(GtkTreeSelection *selection, GtkWidget *dirview);
-
-void dir_item_selected(GtkWidget *selection, struct HexData *hexbuffs);
-
+// Hex editor section
 int fill_hex_display(char *filepath, struct HexData *hexbuffs); 
 
+// Event handlers
+void sys_item_selected(GtkTreeSelection *selection, GtkWidget *dirview);
+void dir_item_selected(GtkWidget *selection, struct HexData *hexbuffs);
+
+// Helper
 int makePerm(struct stat *sb, char *perm);
 
+// Used for setting title of columns in directory section
 const gchar *colnames[] = { "Name", "Size", "Date", "Permissions" };
 
-
 /*
-   Global working path, only set by sys_item_selected and only 
-   used by dir_item_selected.
+   Global var: w_path: working path 
+   Set by sys_item_selected() and only 
+   used by dir_item_selected().
    Purpose: to allow dir_item_selected to open files
             selected in the directory view.
 */
 char w_path[MAX_DIRLEN];
 
+
+/*
+   function: main
+   
+   Sets up the 3 sections of the
+   file browser, calls functions to
+   help with set up.
+*/
 int main (int argc, char *argv[]){
 
   gtk_init (&argc, &argv);
 
+  // Start the browser at root.
   char *start_path = "/";
 
   struct HexData hexinfo;
   
   GtkWidget *hpaned, *vpaned, *dirview, *hexpaned, *hexpanedr;
 
+  // Part(a) Set up hex editor
   GtkWidget *addview = gtk_text_view_new();
   GtkWidget *hexview = gtk_text_view_new();
   GtkWidget *ascview = gtk_text_view_new();
+
   gtk_widget_set_size_request(addview, 70, 225);
   gtk_widget_set_size_request(hexview, 300, 225);
   gtk_widget_set_size_request(ascview, 125, 225);
@@ -87,8 +123,7 @@ int main (int argc, char *argv[]){
   hexinfo.hexview = hexview;
   hexinfo.ascview = ascview;
 
-
-  // Fill hexbox with textviews
+  // Set up a 3 paned layout for the 3 sections of the editor
   hexpaned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
   hexpanedr = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
 
@@ -99,8 +134,8 @@ int main (int argc, char *argv[]){
   gtk_paned_pack2 (GTK_PANED (hexpaned), hexpanedr, TRUE, FALSE);
 
 
-  // setup dirstore
-  GtkListStore *dirstore = gtk_list_store_new(N_COLUMNS,
+  // Part (b) Setup directory section.
+  GtkListStore *dirstore = gtk_list_store_new(D_COLUMNS,
                                               G_TYPE_STRING, /*File name      */
                                               G_TYPE_STRING, /*File size      */
                                               G_TYPE_STRING, /*File size unit */
@@ -110,16 +145,14 @@ int main (int argc, char *argv[]){
 
   build_dirstore(dirstore, start_path);
 
-  // setup dirview
   dirview = gtk_tree_view_new ();
   build_dirview(dirview, &hexinfo);
 
-  //connect dirview and dirstore
   gtk_tree_view_set_model (GTK_TREE_VIEW (dirview), 
                            GTK_TREE_MODEL (dirstore));
 
 
-  // setup sysstore
+  // Part (c) Set up system section
   GtkTreeStore *sysstore = gtk_tree_store_new(T_COLUMNS, 
                                               G_TYPE_STRING, 
                                               GDK_TYPE_PIXBUF,
@@ -129,25 +162,24 @@ int main (int argc, char *argv[]){
 
   build_sysstore(sysstore, &iter, start_path, 1);
 
-  // setup sysview
   GtkWidget *sysview = gtk_tree_view_new();
   build_sysview(sysview, dirview);
 
-  // connect sysview adn sysstore
   gtk_tree_view_set_model(GTK_TREE_VIEW(sysview), GTK_TREE_MODEL(sysstore));
 
-
+  // clean up
   g_object_unref(dirstore);
   g_object_unref(sysstore);
 
-  //setup panes & pack them
+  // Part (d) Pack it all and display.
+
   hpaned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
   vpaned = gtk_paned_new (GTK_ORIENTATION_VERTICAL);
   gtk_widget_set_size_request(hpaned, 800, 500);
   gtk_widget_set_size_request(vpaned, 600, 500);
 
 
-  // create a scrolled window for hexbox
+  // create a scrolled window for hexpaned
   GtkWidget* hex_scroller = gtk_scrolled_window_new (NULL, NULL);
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (hex_scroller),
                                   GTK_POLICY_AUTOMATIC,
@@ -188,6 +220,18 @@ int main (int argc, char *argv[]){
   return 0;
 }
 
+
+/*
+  function: build_dirstore()
+  inputs: dirstore: The store that will hold the data
+          path: the path to the folder whos contents are being displayed.
+
+  Opens the directory from path and reads contents in a loop. Each pass
+  of the loop formats the important information from the directory entry
+  and saves it in dirstore. This function calls makePerm() to set up
+  the permissions column
+
+*/
 static void build_dirstore(GtkListStore *dirstore, char *path){
 
   GtkTreeIter iter;
@@ -230,7 +274,7 @@ static void build_dirstore(GtkListStore *dirstore, char *path){
         // assemble permission string
         makePerm(&sb, permission);
 
-        // format size
+        // format size and units (B or Kib)
         snprintf(size, 15, "%.1f", 
                  ((sb.st_size < 1000) ? sb.st_size : (sb.st_size/1000.0)));
 
@@ -238,7 +282,7 @@ static void build_dirstore(GtkListStore *dirstore, char *path){
                  ((sb.st_size < 1000) ? "B" : "KiB"));
         gtk_list_store_append (dirstore, &iter);
 
-        // setup icon  TODO c file, exe file, ...
+        // Set up icon
         switch (sb.st_mode & S_IFMT) {
           case S_IFDIR: icon = dir_icon; break;
           case S_IFREG: 
@@ -256,28 +300,35 @@ static void build_dirstore(GtkListStore *dirstore, char *path){
             break;
           default:  icon = other_icon; break; //other
         }
-
-
-
-
-
+        // store it all
         gtk_list_store_set (dirstore, &iter,
-                            NAME_COLUMN, entry->d_name,
-                            SIZE_COLUMN, size,
+                            DNAME, entry->d_name,
+                            DSIZE, size,
                             UNIT, unit,
-                            DATE_COLUMN, modtime,
-                            PERM_COLUMN, permission, 
-                            ICON_COLUMN, icon, -1);
+                            DDATE, modtime,
+                            DPERM, permission, 
+                            DICON, icon, -1);
       }
     }
   free(dp);
   }
+  //clean up
   g_object_unref(dir_icon);
   g_object_unref(file_icon);
   g_object_unref(other_icon);
 
 }
 
+/*
+  function: build_dirview()
+  input: dirview: The view for the directory section.
+         hexinfo: A sturct holding all 3 views for the hex editor.
+
+  Sets up each column for rendering and adds selection handler. 
+  hexinfo is passed so that the selection handling can alter the
+  hex editor when a file is selected.
+
+*/
 static void build_dirview(GtkWidget *dirview, struct HexData *hexinfo){
 
   int i;
@@ -285,36 +336,40 @@ static void build_dirview(GtkWidget *dirview, struct HexData *hexinfo){
   GtkCellRenderer *renderer;
   GtkTreeViewColumn *column;
 
-  for(i = NAME_COLUMN; i <= PERM_COLUMN; i++){
+  // Loop through each column to be displayed
+  for(i = DNAME; i <= DPERM; i++){
 
     column = gtk_tree_view_column_new();
 
-    if (j == NAME_COLUMN){
+    // Add icon if rendering the name column
+    if (j == DNAME){
       renderer = gtk_cell_renderer_pixbuf_new();
       gtk_tree_view_column_pack_start(column, renderer, FALSE);
       gtk_tree_view_column_set_attributes(column, renderer, 
-                                          "pixbuf", ICON_COLUMN, NULL);
+                                          "pixbuf", DICON, NULL);
     }
 
     renderer = gtk_cell_renderer_text_new ();
 
-    if (j == SIZE_COLUMN){
+    // align the text to right if size column
+    if (j == DSIZE){
        g_object_set (renderer, "xalign", 1.0, NULL);
     }
 
     gtk_tree_view_column_pack_start(column, renderer, FALSE);
     gtk_tree_view_column_set_attributes (column, renderer, 
                                          "text", i, NULL); 
-
     gtk_tree_view_column_set_title(column, colnames[j]);
     gtk_tree_view_column_set_resizable (column, TRUE);
 
-    if (j != PERM_COLUMN){
+    // Set all columns but permissions to sortable
+    if (j != DPERM){
       gtk_tree_view_column_set_sort_indicator(column, TRUE);           
       gtk_tree_view_column_set_sort_column_id(column, j);
     }
 
-    if (j == SIZE_COLUMN){
+    // if size column add the unit as well.
+    if (j == DSIZE){
       renderer = gtk_cell_renderer_text_new ();
       gtk_tree_view_column_pack_start(column, renderer, FALSE);
       gtk_tree_view_column_set_attributes(column, renderer, 
@@ -335,14 +390,28 @@ static void build_dirview(GtkWidget *dirview, struct HexData *hexinfo){
 
 }
 
+/*
+  function: build_sysstore()
+  inputs: sysstore: The store for data
+          iter: an iter to the directory in the systore whos children this call is adding
+          path: The path to the directory whos subdirectories are being added to sysstore
+          is_root: called with 1 when adding root (first call). called with 0 all other times
+                   to add new data. 
 
-//iter is already in tree, adding its children
-static int build_sysstore(GtkTreeStore *sysstore, GtkTreeIter *iter, char *path, int is_root){
+  This functions adds data to the sysstore, assuming parent (iter) is already
+  in the tree unless is_root is set to 1. Adds the subdirectories of the directory
+  in path to the sysstore for display. The sysstore is built by only adding subdirectories
+  when the parent is selected. 
+
+  Loops thorugh contents of the directory in path, checks if they are directories,
+  and adds them to sysstore if they are. Since this is called everytime a system item
+  is selected it checks to make sure the selected directory hasn't already been explored.
+*/
+static int build_sysstore(GtkTreeStore *sysstore, GtkTreeIter *parent, char *path, int is_root){
   
   DIR *dp;
   struct stat sb;
   struct dirent *entry;
-
   GtkTreeIter child;
 
   GError *error = NULL;
@@ -350,15 +419,15 @@ static int build_sysstore(GtkTreeStore *sysstore, GtkTreeIter *iter, char *path,
 
 
   if (is_root){
-    gtk_tree_store_append (sysstore, iter, NULL);
-    gtk_tree_store_set (sysstore, iter, 
-                        TNAME_COLUMN, "/",
-                        TICON_COLUMN, dir_icon, 
+    gtk_tree_store_append (sysstore, parent, NULL);
+    gtk_tree_store_set (sysstore, parent, 
+                        TNAME, "/",
+                        TICON, dir_icon, 
                         TPATH, path, -1);
   }
 
-  // Check if iter hasn't gotten it's children yet
-  if (gtk_tree_model_iter_has_child(GTK_TREE_MODEL(sysstore), iter) != TRUE){
+  // Check if iter doesn't have it's children yet
+  if (gtk_tree_model_iter_has_child(GTK_TREE_MODEL(sysstore), parent) != TRUE){
 
     dp = opendir(path);
  
@@ -373,11 +442,11 @@ static int build_sysstore(GtkTreeStore *sysstore, GtkTreeIter *iter, char *path,
       stat(entrypath, &sb);
       if(S_ISDIR(sb.st_mode)){
         if (entry->d_name[0] != '.'){   
-          gtk_tree_store_append (sysstore, &child, iter);
+          gtk_tree_store_append (sysstore, &child, parent);
             
           gtk_tree_store_set (sysstore, &child, 
-                              TNAME_COLUMN, entry->d_name,
-                              TICON_COLUMN, dir_icon,
+                              TNAME, entry->d_name,
+                              TICON, dir_icon,
                               TPATH, entrypath, -1);
         }
       }
@@ -389,23 +458,34 @@ static int build_sysstore(GtkTreeStore *sysstore, GtkTreeIter *iter, char *path,
 
   return 0;
 }
+
+/*
+  function: build_sysview()
+  inputs: sysview: The view being rendered
+          dirview: The directory view passed to the selection handler
+                   so that it can be changed when a directory in sysview
+                   is selected. 
+
+  Sets up the system section's view and adds selection handling.
+  Needs dirview for selection handler.
+
+*/
 static void build_sysview(GtkWidget *sysview, GtkWidget *dirview){
 
     GtkCellRenderer *renderer;
     GtkTreeViewColumn *column;
 
-    // add the Position to the treeview
     column = gtk_tree_view_column_new();
 
     renderer = gtk_cell_renderer_pixbuf_new();
     gtk_tree_view_column_pack_start(column, renderer, FALSE);
     gtk_tree_view_column_set_attributes(column, renderer, 
-                                        "pixbuf", TICON_COLUMN, NULL);
+                                        "pixbuf", TICON, NULL);
 
     renderer = gtk_cell_renderer_text_new();
     gtk_tree_view_column_pack_start(column, renderer, FALSE);
     gtk_tree_view_column_set_attributes(column, renderer, 
-                                        "text", TNAME_COLUMN, NULL);
+                                        "text", TNAME, NULL);
 
     gtk_tree_view_append_column (GTK_TREE_VIEW (sysview), column);
 
@@ -419,9 +499,17 @@ static void build_sysview(GtkWidget *sysview, GtkWidget *dirview){
 
 }
 
+/*
+  function: dir_item_selected()
+  inputs: selection: the selectrion from the directory view
+          hexinfo: a struct holding the hex views.
 
+  Selection handler for the directory view. Calls fill_hex_display() with
+  hexinfo to update the hex editor when an item is selected.
 
-// Start hex viewer
+  Note: Reads in w_path to get the location of the file selected.
+
+*/
 void dir_item_selected (GtkWidget *selection, struct HexData *hexinfo) {
 
     GtkTreeModel *model;
@@ -431,18 +519,23 @@ void dir_item_selected (GtkWidget *selection, struct HexData *hexinfo) {
 
     if (gtk_tree_selection_get_selected (GTK_TREE_SELECTION(selection), 
         &model, &iter)) {
-        
-        gtk_tree_model_get (model, &iter, NAME_COLUMN, &name, -1);
-
+        gtk_tree_model_get (model, &iter, DNAME, &name, -1);
         snprintf(filepath, MAX_DIRLEN, "%s%s", w_path, name);
-
-        g_message("selected %s\n", filepath);
         fill_hex_display(filepath, hexinfo); 
-
     }
 }
 
+/*
+  function: sys_item_selected()
+  inputs: selection: Selection from the sysview
+          dirview: the directroy view to be updated on 
+                   selection of item from sysview
+  
+  resets the old dirstore with new data and updates. Also updates 
+  sysview by giving selected directory it's subdirectories.
 
+  Note: updates w_path to selected directory
+*/
 void sys_item_selected(GtkTreeSelection *selection, GtkWidget *dirview){
 
   GtkTreeModel *sysmodel;
@@ -452,29 +545,23 @@ void sys_item_selected(GtkTreeSelection *selection, GtkWidget *dirview){
   gchar *dirname;
   gchar *path;
 
-  // Part (a) build path
 
   if (gtk_tree_selection_get_selected (GTK_TREE_SELECTION(selection), 
                                        &sysmodel, &child)) {
       
-    gtk_tree_model_get (sysmodel, &child, TNAME_COLUMN, &dirname, TPATH, &path, -1);
+    gtk_tree_model_get (sysmodel, &child, TNAME, &dirname, TPATH, &path, -1);
 
-    g_message("%s\n", path);
-    // Set global cwd to path
     strcpy(w_path, path);
 
-    // Part (b) get model and update with new data
     dirmodel = gtk_tree_view_get_model(GTK_TREE_VIEW(dirview));
 
     build_dirstore(GTK_LIST_STORE(dirmodel), path);
 
-    //connect dirview and dirstore
 
     gtk_tree_view_set_model (GTK_TREE_VIEW (dirview), 
                              dirmodel);
 
-
-    // Part (c) update sys tree 
+    // Update system view
     if (gtk_tree_selection_get_selected (GTK_TREE_SELECTION(selection), 
                                          &sysmodel, &iter)) {
       build_sysstore(GTK_TREE_STORE(sysmodel), &iter, path, 0);
@@ -482,7 +569,16 @@ void sys_item_selected(GtkTreeSelection *selection, GtkWidget *dirview){
   }
 }
 
+/*
+  fill_hex_display()
+  inputs: filepath: the path to the file to be opend in the hex editor.
+          hexinfo: A struct holding all views of hex editor.
 
+  Opens the file from filepath and readings in the data as Hex and Ascii, filling
+  the correct buffers for the hex editor views with the data. Also keeps track of
+  the address of the views in an address buffer.
+
+*/
 int fill_hex_display(char *filepath, struct HexData *hexinfo){
 
   int i;
@@ -494,6 +590,7 @@ int fill_hex_display(char *filepath, struct HexData *hexinfo){
   GtkTextIter hexiter;  
   GtkTextIter asciter;  
 
+  // Create the new buffers for views
   GtkTextBuffer *hexbuff = gtk_text_view_get_buffer(GTK_TEXT_VIEW(hexinfo->hexview)); 
   GtkTextBuffer *addbuff = gtk_text_view_get_buffer(GTK_TEXT_VIEW(hexinfo->addview)); 
   GtkTextBuffer *ascbuff = gtk_text_view_get_buffer(GTK_TEXT_VIEW(hexinfo->ascview)); 
@@ -502,14 +599,9 @@ int fill_hex_display(char *filepath, struct HexData *hexinfo){
   GtkTextTagTable *addtable = gtk_text_tag_table_new();
   GtkTextTagTable *asctable = gtk_text_tag_table_new();
 
-
   hexbuff = gtk_text_buffer_new(hextable);
   addbuff = gtk_text_buffer_new(addtable);
   ascbuff = gtk_text_buffer_new(asctable);
-
-  g_object_unref(hextable);
-  g_object_unref(addtable);
-  g_object_unref(asctable);
 
   int input;
     
@@ -517,7 +609,6 @@ int fill_hex_display(char *filepath, struct HexData *hexinfo){
       printf("File %s not found\n", filepath);
       return 1;
   }
-
 
   // initialize the buffer's iterator
   gtk_text_buffer_get_iter_at_offset(addbuff, &additer, 0);
@@ -532,8 +623,7 @@ int fill_hex_display(char *filepath, struct HexData *hexinfo){
      gtk_text_buffer_insert (addbuff, &additer, "\n", -1);
 
      //remove unprintable for ascii column
-     for(i = 0; i < 16; i++){
-       
+     for(i = 0; i < 16; i++){    
        snprintf(hexstr, 4, " %02x", line[i]);
        hexstr[3] = '\0';
        gtk_text_buffer_insert (hexbuff, &hexiter, hexstr, -1);
@@ -542,6 +632,7 @@ int fill_hex_display(char *filepath, struct HexData *hexinfo){
          line[i] = '.';
        }  
      }
+
      line[16] = '\0';
      gtk_text_buffer_insert (ascbuff, &asciter, line, -1);
      gtk_text_buffer_insert (ascbuff, &asciter, "\n", -1);
@@ -556,12 +647,24 @@ int fill_hex_display(char *filepath, struct HexData *hexinfo){
      memset(addstr, 0, sizeof(addstr));
    
   }
+
+  //clean up
+  g_object_unref(hextable);
+  g_object_unref(addtable);
+  g_object_unref(asctable);
   g_object_unref(hexbuff);
   g_object_unref(addbuff);
   g_object_unref(ascbuff);
   return 0;
 }
 
+/*
+   function: display()
+   inputs: hpaned: the paned to put in a window
+
+   Puts the input widget into a window with some formatting.
+   Then calls gtk_widget_show_all() to display everything.
+*/
 void display (GtkWidget *hpaned) {
     
   // create the window
@@ -576,6 +679,15 @@ void display (GtkWidget *hpaned) {
   gtk_widget_show_all (window);
 }
 
+/*
+  functionL makePerm()
+  inputs: sb: stat struct for the file whos permission
+              are to be assembled.
+          perm: string that will store human readable permissions
+
+  A small helper function that builds file permissions
+  in the rwx form.
+*/
 int makePerm(struct stat *sb, char *perm){
 
   // User
