@@ -1,8 +1,8 @@
 #include <gtk/gtk.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include "access.h"
 
 #define MAX_LINE 1240
 #define MAX_DIRLEN 256
@@ -14,6 +14,7 @@ enum {
   SIZE_COLUMN,
   DATE_COLUMN,
   PERM_COLUMN,
+  UNIT,
   ICON_COLUMN,
   N_COLUMNS
 };
@@ -22,7 +23,7 @@ enum {
 enum {
   TNAME_COLUMN = 0,
   TICON_COLUMN,
-  TLEVEL,
+  TPATH,
   T_COLUMNS
 };
 
@@ -47,6 +48,8 @@ void sys_item_selected(GtkTreeSelection *selection, GtkWidget *dirview);
 void dir_item_selected(GtkWidget *selection, struct HexData *hexbuffs);
 
 int fill_hex_display(char *filepath, struct HexData *hexbuffs); 
+
+int makePerm(struct stat *sb, char *perm);
 
 const gchar *colnames[] = { "Name", "Size", "Date", "Permissions" };
 
@@ -98,11 +101,12 @@ int main (int argc, char *argv[]){
 
   // setup dirstore
   GtkListStore *dirstore = gtk_list_store_new(N_COLUMNS,
-                                              G_TYPE_STRING, /*File name   */
-                                              G_TYPE_STRING, /*File size   */
-                                              G_TYPE_STRING, /*Mod Date    */
-                                              G_TYPE_STRING, /*Access Perm */
-                                              GDK_TYPE_PIXBUF); /*Icon     */
+                                              G_TYPE_STRING, /*File name      */
+                                              G_TYPE_STRING, /*File size      */
+                                              G_TYPE_STRING, /*File size unit */
+                                              G_TYPE_STRING, /*Mod Date       */
+                                              G_TYPE_STRING, /*Access Perm    */
+                                              GDK_TYPE_PIXBUF); /*Icon        */
 
   build_dirstore(dirstore, start_path);
 
@@ -119,7 +123,7 @@ int main (int argc, char *argv[]){
   GtkTreeStore *sysstore = gtk_tree_store_new(T_COLUMNS, 
                                               G_TYPE_STRING, 
                                               GDK_TYPE_PIXBUF,
-                                              G_TYPE_INT);
+                                              G_TYPE_STRING);
 
   GtkTreeIter iter;
 
@@ -195,10 +199,14 @@ static void build_dirstore(GtkListStore *dirstore, char *path){
   char modtime[9];
   char permission[10];
   char size[15];
+  char unit[5];
+  int i;
+  int exe;
   GError *error = NULL;
-  GdkPixbuf* dir_icon = gdk_pixbuf_new_from_file("dir_icon.png", &error);
-  GdkPixbuf* file_icon = gdk_pixbuf_new_from_file("file_icon.png", &error);
-  GdkPixbuf* other_icon = gdk_pixbuf_new_from_file("icon2.png", &error);
+  GdkPixbuf* dir_icon = gdk_pixbuf_new_from_file("icons/dir_icon.png", &error);
+  GdkPixbuf* file_icon = gdk_pixbuf_new_from_file("icons/file_icon.png", &error);
+  GdkPixbuf* exe_icon = gdk_pixbuf_new_from_file("icons/exe_icon.png", &error);
+  GdkPixbuf* other_icon = gdk_pixbuf_new_from_file("icons/other_icon.png", &error);
   GdkPixbuf* icon;
 
   gtk_list_store_clear(dirstore);
@@ -223,25 +231,43 @@ static void build_dirstore(GtkListStore *dirstore, char *path){
         makePerm(&sb, permission);
 
         // format size
-        snprintf(size, 15, "%.1f %s", 
-                 ((sb.st_size < 1000) ? sb.st_size : (sb.st_size/1000.0)),
-                 ((sb.st_size < 1000) ? "B" : "KiB") );
+        snprintf(size, 15, "%.1f", 
+                 ((sb.st_size < 1000) ? sb.st_size : (sb.st_size/1000.0)));
+
+        snprintf(unit, 15, "%s", 
+                 ((sb.st_size < 1000) ? "B" : "KiB"));
         gtk_list_store_append (dirstore, &iter);
 
         // setup icon  TODO c file, exe file, ...
         switch (sb.st_mode & S_IFMT) {
-          case S_IFDIR: icon = dir_icon; break; //directory
-          case S_IFREG: icon = file_icon; break; //reg file
+          case S_IFDIR: icon = dir_icon; break;
+          case S_IFREG: 
+            exe = 1;
+            for (i = 0; entry->d_name[i]; i++){
+              if(entry->d_name[i] == '.'){
+                exe = 0;
+              }
+            }
+            if (exe){
+              icon = exe_icon;
+            }else{
+              icon = file_icon; 
+            }
+            break;
           default:  icon = other_icon; break; //other
         }
+
+
+
+
 
         gtk_list_store_set (dirstore, &iter,
                             NAME_COLUMN, entry->d_name,
                             SIZE_COLUMN, size,
+                            UNIT, unit,
                             DATE_COLUMN, modtime,
                             PERM_COLUMN, permission, 
                             ICON_COLUMN, icon, -1);
-
       }
     }
   free(dp);
@@ -288,6 +314,13 @@ static void build_dirview(GtkWidget *dirview, struct HexData *hexinfo){
       gtk_tree_view_column_set_sort_column_id(column, j);
     }
 
+    if (j == SIZE_COLUMN){
+      renderer = gtk_cell_renderer_text_new ();
+      gtk_tree_view_column_pack_start(column, renderer, FALSE);
+      gtk_tree_view_column_set_attributes(column, renderer, 
+                                          "text", UNIT, NULL);
+    }
+
     gtk_tree_view_append_column (GTK_TREE_VIEW (dirview), column);
     j++;
   }
@@ -313,14 +346,15 @@ static int build_sysstore(GtkTreeStore *sysstore, GtkTreeIter *iter, char *path,
   GtkTreeIter child;
 
   GError *error = NULL;
-  GdkPixbuf* dir_icon = gdk_pixbuf_new_from_file("dir_icon.png", &error);
+  GdkPixbuf* dir_icon = gdk_pixbuf_new_from_file("icons/dir_icon.png", &error);
 
 
   if (is_root){
     gtk_tree_store_append (sysstore, iter, NULL);
     gtk_tree_store_set (sysstore, iter, 
                         TNAME_COLUMN, "/",
-                        TICON_COLUMN, dir_icon, -1);
+                        TICON_COLUMN, dir_icon, 
+                        TPATH, path, -1);
   }
 
   // Check if iter hasn't gotten it's children yet
@@ -335,7 +369,7 @@ static int build_sysstore(GtkTreeStore *sysstore, GtkTreeIter *iter, char *path,
     char entrypath[MAX_DIRLEN];
 
     while((entry = readdir(dp))){
-      snprintf(entrypath, MAX_DIRLEN, "%s%s", path, entry->d_name);
+      snprintf(entrypath, MAX_DIRLEN, "%s%s/", path, entry->d_name);
       stat(entrypath, &sb);
       if(S_ISDIR(sb.st_mode)){
         if (entry->d_name[0] != '.'){   
@@ -343,7 +377,8 @@ static int build_sysstore(GtkTreeStore *sysstore, GtkTreeIter *iter, char *path,
             
           gtk_tree_store_set (sysstore, &child, 
                               TNAME_COLUMN, entry->d_name,
-                              TICON_COLUMN, dir_icon, -1);
+                              TICON_COLUMN, dir_icon,
+                              TPATH, entrypath, -1);
         }
       }
     }
@@ -414,36 +449,15 @@ void sys_item_selected(GtkTreeSelection *selection, GtkWidget *dirview){
   GtkTreeModel *dirmodel;
   GtkTreeIter iter;
   GtkTreeIter child;
-  GtkTreeIter parent;
   gchar *dirname;
-  char path[MAX_DIRLEN];
-  char newpath[MAX_DIRLEN];
+  gchar *path;
 
   // Part (a) build path
 
   if (gtk_tree_selection_get_selected (GTK_TREE_SELECTION(selection), 
                                        &sysmodel, &child)) {
       
-    gtk_tree_model_get (sysmodel, &child, TNAME_COLUMN, &dirname, -1);
-
-    if(strcmp(dirname, "/") == 0){ 
-      snprintf(path, MAX_DIRLEN, "%s", dirname);
-    }else{
-      snprintf(path, MAX_DIRLEN, "%s/", dirname);
-    } 
-    while (gtk_tree_model_iter_parent(sysmodel, &parent, &child) != FALSE){
-
-      gtk_tree_model_get(sysmodel, &parent, TNAME_COLUMN, &dirname, -1);
-
-      if(strcmp(dirname, "/") == 0){ 
-        snprintf(newpath, MAX_DIRLEN, "%s%s", dirname, path);
-      }else{
-        snprintf(newpath, MAX_DIRLEN, "%s/%s", dirname, path);
-      }
-      strcpy(path, newpath);
-      newpath[0] = '\0';
-      child = parent;
-    }
+    gtk_tree_model_get (sysmodel, &child, TNAME_COLUMN, &dirname, TPATH, &path, -1);
 
     g_message("%s\n", path);
     // Set global cwd to path
@@ -562,4 +576,25 @@ void display (GtkWidget *hpaned) {
   gtk_widget_show_all (window);
 }
 
+int makePerm(struct stat *sb, char *perm){
+
+  // User
+  perm[0] = (sb->st_mode & S_IRUSR) ? 'r' : '-';
+  perm[1] = (sb->st_mode & S_IWUSR) ? 'w' : '-';
+  perm[2] = (sb->st_mode & S_IXUSR) ? 'x' : '-';
+
+  // Group
+  perm[3] = (sb->st_mode & S_IRGRP) ? 'r' : '-';
+  perm[4] = (sb->st_mode & S_IWGRP) ? 'w' : '-';
+  perm[5] = (sb->st_mode & S_IXGRP) ? 'x' : '-';
+
+  // Other 
+  perm[6] = (sb->st_mode & S_IROTH) ? 'r' : '-';
+  perm[7] = (sb->st_mode & S_IWOTH) ? 'w' : '-';
+  perm[8] = (sb->st_mode & S_IXOTH) ? 'x' : '-';
+
+  perm[9] = '\0';
+
+  return 0;
+}
 

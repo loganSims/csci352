@@ -12,17 +12,6 @@
 int get_subdir(char *path, int level);
 int get_files_in_dir(char *path);
 
-/*
-int main (int argc, char** argv) {
-
-  char *path = "/home/logan/Desktop/";
-
-  get_subdir(path, 0);
-  
-  return 0;
-
-}
-*/
 
 int get_subdir(char *path, int level){
 
@@ -77,7 +66,7 @@ int makePerm(struct stat *sb, char *perm){
 
   return 0;
 }
-
+/*
 int get_files_in_dir(char *path){
 
   DIR *dp;
@@ -102,15 +91,15 @@ int get_files_in_dir(char *path){
     
     makePerm(&sb, permission);
 
-
     printf("%s ", entry->d_name); // name
     printf("%lu ", sb.st_size);   // size in bytes
-    printf("%s ", modtime);      // mod date
-    printf("%s\n", permission);
+    printf("%s ", modtime);       // mod date
+    printf("%s\n", permission);   // mod rights
 
   }
 
   closedir(dp);
   return 0;
 }
+*/
 

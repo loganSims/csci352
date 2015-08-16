@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -g
 LDFLAGS = -g
-OBJECTS1 = access.o browser.o
+OBJECTS1 = browser.o
 EXES = browser
 PKG = `pkg-config --cflags --libs gtk+-3.0`
 all: $(EXES)
