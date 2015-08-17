@@ -438,8 +438,13 @@ static int build_sysstore(GtkTreeStore *sysstore, GtkTreeIter *parent, char *pat
     char entrypath[MAX_DIRLEN];
 
     while((entry = readdir(dp))){
-      snprintf(entrypath, MAX_DIRLEN, "%s%s/", path, entry->d_name);
+      if (is_root){
+        snprintf(entrypath, MAX_DIRLEN, "%s%s", path, entry->d_name);
+      }else{
+        snprintf(entrypath, MAX_DIRLEN, "%s/%s", path, entry->d_name);
+      }
       stat(entrypath, &sb);
+
       if(S_ISDIR(sb.st_mode)){
         if (entry->d_name[0] != '.'){   
           gtk_tree_store_append (sysstore, &child, parent);
@@ -551,11 +556,11 @@ void sys_item_selected(GtkTreeSelection *selection, GtkWidget *dirview){
       
     gtk_tree_model_get (sysmodel, &child, TNAME, &dirname, TPATH, &path, -1);
 
-    strcpy(w_path, path);
-
+    snprintf(w_path, MAX_DIRLEN, "%s/", path);
+    
     dirmodel = gtk_tree_view_get_model(GTK_TREE_VIEW(dirview));
 
-    build_dirstore(GTK_LIST_STORE(dirmodel), path);
+    build_dirstore(GTK_LIST_STORE(dirmodel), w_path);
 
 
     gtk_tree_view_set_model (GTK_TREE_VIEW (dirview), 
